@@ -1,0 +1,96 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #101010;
+  --bg-elev: #151515;
+  --bg-elev-2: #181818;
+  --border: #232323;
+  --muted: #9ca3af;
+  --text: #e5e7eb;
+  --primary: #f97316; /* orange-500 */
+  --primary-600: #ea580c;
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Noto Sans, Ubuntu, Cantarell, Helvetica Neue, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+}
+
+.font-mono { font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+
+/* Reusable UI tokens */
+.card {
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.card-2 {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  font-weight: 600;
+  font-size: 12px;
+  line-height: 1;
+  padding: 0.5rem 0.875rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  transition: transform 0.08s ease, background-color 0.12s ease, opacity 0.12s ease;
+}
+
+.btn:active { transform: translateY(1px); }
+
+.btn-primary { background: #e5e7eb; color: #0a0a0a; border-color: #c8cdd3; }
+.btn-primary:hover { background: #d6dae1; }
+
+.btn-ghost { background: #121212; color: #e5e7eb; }
+.btn-ghost:hover { background: #1a1a1a; }
+
+.btn-danger { background: #ef4444; color: white; border-color: #ef4444; }
+.btn-danger:hover { background: #dc2626; }
+
+.btn-blue { background: #3b82f6; color: white; border-color: #3b82f6; }
+.btn-blue:hover { background: #2563eb; }
+
+.input {
+  background: #121212;
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 14px;
+  padding: 0.5rem 0.875rem;
+  border-radius: 8px;
+  outline: none;
+}
+
+.input::placeholder { color: #6b7280; }
+
+.label { color: #9ca3af; font-size: 13px; }
+
+.kbd {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  background: #0f0f0f;
+  border: 1px solid var(--border);
+  padding: 2px 6px;
+  border-radius: 6px;
+  color: #d1d5db;
+}
+
+.surface {
+  background: var(--bg);
+  border: 1px solid var(--border);
+}

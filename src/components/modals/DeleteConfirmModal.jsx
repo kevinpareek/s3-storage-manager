@@ -1,8 +1,17 @@
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { LoaderCircle } from 'lucide-react';
 
 export default function DeleteConfirmModal({ isOpen, handleClose, onConfirm, type, name }) {
   const [input, setInput] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setIsDeleting(false)
+      setInput('')
+    }
+  }, [isOpen])
 
   if (!isOpen) return null;
 
@@ -23,19 +32,37 @@ export default function DeleteConfirmModal({ isOpen, handleClose, onConfirm, typ
                   onChange={e => setInput(e.target.value)}
                   placeholder={`Type '${name}' to confirm`}
                   autoFocus
+                  disabled={isDeleting}
                 />
                 <span className="mt-1 text-xs text-gray-500">Folder: <span className="font-mono bg-[#232323] px-2 py-0.5 rounded text-orange-200">{name}</span></span>
               </div>
               <div className="flex items-center flex-row-reverse gap-2">
-                <button onClick={handleClose} type="button" className="btn btn-ghost mt-4">
+                <button onClick={handleClose} type="button" className="btn btn-ghost mt-4" disabled={isDeleting}>
                   Cancel
                 </button>
                 <button
                   type="button"
                   className="btn btn-primary mt-4 disabled:opacity-50"
-                  disabled={input !== name}
-                  onClick={() => { onConfirm(); setInput(''); }}
-                >Delete</button>
+                  disabled={input !== name || isDeleting}
+                  onClick={async () => {
+                    setIsDeleting(true);
+                    setInput('');
+                    try {
+                      await onConfirm();
+                    } catch (e) {
+                      setIsDeleting(false);
+                    }
+                  }}
+                >
+                  {isDeleting ? (
+                    <span className="inline-flex items-center gap-2">
+                      <LoaderCircle size={16} className="animate-spin" />
+                      Deleting...
+                    </span>
+                  ) : (
+                    'Delete'
+                  )}
+                </button>
               </div>
             </div>
           </>
@@ -50,14 +77,31 @@ export default function DeleteConfirmModal({ isOpen, handleClose, onConfirm, typ
                 <span className="font-mono bg-[#232323] px-2 py-0.5 rounded text-orange-200 mt-1">{name}</span>
               </div>
               <div className="flex items-center flex-row-reverse gap-2">
-                <button onClick={handleClose} type="button" className="btn btn-ghost mt-4">
+                <button onClick={handleClose} type="button" className="btn btn-ghost mt-4" disabled={isDeleting}>
                   Cancel
                 </button>
                 <button
                   type="button"
-                  className="btn btn-primary mt-4"
-                  onClick={onConfirm}
-                >Delete</button>
+                  className="btn btn-primary mt-4 disabled:opacity-50"
+                  disabled={isDeleting}
+                  onClick={async () => {
+                    setIsDeleting(true);
+                    try {
+                      await onConfirm();
+                    } catch (e) {
+                      setIsDeleting(false);
+                    }
+                  }}
+                >
+                  {isDeleting ? (
+                    <span className="inline-flex items-center gap-2">
+                      <LoaderCircle size={16} className="animate-spin" />
+                      Deleting...
+                    </span>
+                  ) : (
+                    'Delete'
+                  )}
+                </button>
               </div>
             </div>
           </>

@@ -13,7 +13,9 @@ export default async function MultiPartUpload(s3, file, currentDirectory = "/", 
     } else {
         dir = dir.replace(/^\/+/, "").replace(/\/+$/, "") + "/";
     }
-    const filePath = dir + file.name;
+    // Use the webkitRelativePath or our synthetic relativePath to preserve folder structure
+    const relativeKey = (file.webkitRelativePath || file.relativePath || file.name).replace(/^\/+/, "")
+    const filePath = dir + relativeKey;
     let uploadId = ''
     let key = ''
 

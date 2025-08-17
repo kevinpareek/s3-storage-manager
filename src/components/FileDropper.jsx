@@ -9,6 +9,61 @@ export default function FileDropper({ currentDirectory = "", uploading = false, 
     const [uploadingIndex, setUploadingIndex] = useState(null)
     const { s3, credentials } = useCredentials()
 
+    // Read all entries from a directory reader (Chrome/Safari webkit entries)
+    async function readAllDirectoryEntries(directoryReader) {
+        const entries = []
+        // Keep calling readEntries() until it returns an empty array
+        // to ensure we get all entries within this directory
+        // (readEntries may return only a subset per call)
+        // eslint-disable-next-line no-constant-condition
+        while (true) {
+            const batch = await new Promise((resolve, reject) => {
+                try {
+                    directoryReader.readEntries(resolve, reject)
+                } catch (err) {
+                    reject(err)
+                }
+            })
+            if (!batch || batch.length === 0) break
+            entries.push(...batch)
+        }
+        return entries
+    }
+
+    // Traverse a FileSystemEntry (file or directory) and collect File objects
+    async function traverseFileTree(entry, path = "") {
+        return new Promise(async (resolve, reject) => {
+            try {
+                if (entry.isFile) {
+                    entry.file((file) => {
+                        // Preserve relative path for folder uploads
+                        const relativePath = `${path}${file.name}`
+                        try {
+                            // Attach a synthetic relativePath if webkitRelativePath is unavailable
+                            // This is safe and used only by our upload logic
+                            // eslint-disable-next-line no-param-reassign
+                            file.relativePath = relativePath
+                        } catch (_) {
+                            // If assignment fails, we still proceed using webkitRelativePath or name later
+                        }
+                        resolve([file])
+                    }, reject)
+                } else if (entry.isDirectory) {
+                    const reader = entry.createReader()
+                    const entries = await readAllDirectoryEntries(reader)
+                    const nestedFilesArrays = await Promise.all(
+                        entries.map((ent) => traverseFileTree(ent, `${path}${entry.name}/`))
+                    )
+                    resolve(nestedFilesArrays.flat())
+                } else {
+                    resolve([])
+                }
+            } catch (error) {
+                reject(error)
+            }
+        })
+    }
+
     const handleDragEnter = useCallback((e) => {
         e.preventDefault()
         e.stopPropagation()
@@ -26,12 +81,28 @@ export default function FileDropper({ currentDirectory = "", uploading = false, 
         e.stopPropagation()
     }, [])
 
-    const handleDrop = useCallback((e) => {
+    const handleDrop = useCallback(async (e) => {
         e.preventDefault()
         e.stopPropagation()
         setIsDragging(false)
-        const droppedFiles = Array.from(e.dataTransfer.files)
-        setFiles(prevFiles => [...prevFiles, ...droppedFiles])
+
+        const { items, files: dtFiles } = e.dataTransfer
+
+        // Prefer entries when available to support directories
+        const supportsEntries = items && items.length > 0 && typeof items[0].webkitGetAsEntry === 'function'
+        if (supportsEntries) {
+            const itemEntries = Array.from(items)
+                .filter((it) => it.kind === 'file')
+                .map((it) => it.webkitGetAsEntry())
+                .filter(Boolean)
+
+            const collectedArrays = await Promise.all(itemEntries.map((entry) => traverseFileTree(entry)))
+            const collectedFiles = collectedArrays.flat()
+            setFiles(prevFiles => [...prevFiles, ...collectedFiles])
+        } else {
+            const droppedFiles = Array.from(dtFiles)
+            setFiles(prevFiles => [...prevFiles, ...droppedFiles])
+        }
     }, [])
 
     const handleFileInput = useCallback((e) => {
@@ -93,20 +164,34 @@ export default function FileDropper({ currentDirectory = "", uploading = false, 
                                 : 'Drag & drop files here, or click to select'}
                     </p>
                     <p className="font-mono text-xs text-gray-600 mt-1">
-                        Supports multiple files
+                        Supports multiple files and folders
                     </p>
                 </div>
 
-                <label className="btn btn-ghost cursor-pointer">
-                    <input
-                        type="file"
-                        className="hidden"
-                        multiple
-                        onChange={handleFileInput}
-                        disabled={uploading}
-                    />
-                    Select Files
-                </label>
+                <div className="flex items-center gap-2">
+                    <label className="btn btn-ghost cursor-pointer">
+                        <input
+                            type="file"
+                            className="hidden"
+                            multiple
+                            onChange={handleFileInput}
+                            disabled={uploading}
+                        />
+                        Select Files
+                    </label>
+                    <label className="btn btn-ghost cursor-pointer">
+                        <input
+                            type="file"
+                            className="hidden"
+                            onChange={handleFileInput}
+                            disabled={uploading}
+                            webkitdirectory=""
+                            mozdirectory=""
+                            directory=""
+                        />
+                        Select Folder
+                    </label>
+                </div>
             </div>
 
             {files.length > 0 && (
@@ -124,7 +209,7 @@ export default function FileDropper({ currentDirectory = "", uploading = false, 
                                 <div className="flex items-center space-x-2">
                                     <FileText size={18} className='text-gray-500' />
                                     <span className="font-mono text-xs text-gray-300 truncate max-w-xs">
-                                        {file.name}
+                                        {file.webkitRelativePath || file.relativePath || file.name}
                                     </span>
                                 </div>
 

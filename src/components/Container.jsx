@@ -29,6 +29,7 @@ export default function Container() {
     const [renameTarget, setRenameTarget] = useState(null)
     const [searchTerm, setSearchTerm] = useState('')
     const [filterType, setFilterType] = useState('all')
+    const [loading, setLoading] = useState(false)
     const [infoModalOpen, setInfoModalOpen] = useState(false)
     const [infoItem, setInfoItem] = useState(null)
     const [shareUrl, setShareUrl] = useState(null)
@@ -61,6 +62,7 @@ export default function Container() {
     // Helper to load files for current directory
     const loadFiles = useCallback(async () => {
         if (!credentials) return;
+    setLoading(true)
         const location = localStorage.getItem('currentDirectory') || '/';
         let contents = [];
         if (searchTerm) {
@@ -74,6 +76,7 @@ export default function Container() {
             contents = filterFilesByType(contents, filterType);
         }
         setFiles(contents);
+    setLoading(false)
     }, [credentials, s3, searchTerm, filterType]);
 
     useEffect(() => {
@@ -205,6 +208,7 @@ export default function Container() {
                         <Finder
                             contents={files}
                             currentDirectory={currentDirectory}
+                            loading={loading}
                             setCurrentDirectory={handleSetCurrentDirectory}
                             onRename={(item) => {
                                 setRenameTarget(item)

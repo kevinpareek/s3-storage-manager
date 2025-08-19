@@ -1,10 +1,12 @@
 import { AbortMultipartUploadCommand, CompleteMultipartUploadCommand, CreateMultipartUploadCommand, UploadPartCommand } from "@aws-sdk/client-s3";
 
-export default async function MultiPartUpload(s3, file, currentDirectory = "/", bucketName = "") {
+export default async function MultiPartUpload(s3, file, currentDirectory = "/", bucketName = "", opts = {}) {
+    // opts: { onProgress: (uploadedBytes, totalBytes)=>{}, signal: AbortSignal, partSize: number }
+    const { onProgress, signal, partSize } = opts || {}
 
     const arrayBuffer = await file.arrayBuffer()
     const buffer = new Uint8Array(arrayBuffer)
-    const chunkSize = 5 * 1024 * 1024
+    const chunkSize = partSize || (5 * 1024 * 1024)
     const totalParts = Math.ceil(buffer.length / chunkSize)
     // Ensure currentDirectory has no leading slash and ends with exactly one slash if not root
     let dir = currentDirectory.trim()
@@ -32,7 +34,12 @@ export default async function MultiPartUpload(s3, file, currentDirectory = "/", 
         const parts = []
 
         // Uploading part by part on S3
+        let uploadedBytes = 0
         for (let partNumber = 1; partNumber <= totalParts; partNumber++) {
+            if (signal && signal.aborted) {
+                // Abort requested from caller
+                throw new Error('aborted')
+            }
             const start = (partNumber - 1) * chunkSize;
             const end = Math.min(partNumber * chunkSize, buffer.length);
             const partBuffer = buffer.slice(start, end);
@@ -49,6 +56,11 @@ export default async function MultiPartUpload(s3, file, currentDirectory = "/", 
                 ETag: uploadRes.ETag,
                 PartNumber: partNumber,
             });
+            // update uploaded bytes and call progress callback
+            uploadedBytes += partBuffer.length
+            if (typeof onProgress === 'function') {
+                try { onProgress(uploadedBytes, buffer.length) } catch (e) { /* ignore */ }
+            }
         }
 
         await s3.send(new CompleteMultipartUploadCommand({
@@ -70,6 +82,7 @@ export default async function MultiPartUpload(s3, file, currentDirectory = "/", 
                 UploadId: uploadId
             }))
         }
-        return false
+    // If aborted, surface that via a special flag by returning false
+    return false
     }
 }

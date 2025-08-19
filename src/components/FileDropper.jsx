@@ -5,6 +5,7 @@ import useCredentials from '../hooks/useCredentials'
 
 export default function FileDropper({ currentDirectory = "", uploading = false, setUploading }) {
     const [isDragging, setIsDragging] = useState(false)
+    // files: array of { file: File, id, progress (0-100), status: 'pending'|'uploading'|'done'|'error', controller }
     const [files, setFiles] = useState([])
     const [uploadingIndex, setUploadingIndex] = useState(null)
     const { s3, credentials } = useCredentials()
@@ -97,17 +98,17 @@ export default function FileDropper({ currentDirectory = "", uploading = false, 
                 .filter(Boolean)
 
             const collectedArrays = await Promise.all(itemEntries.map((entry) => traverseFileTree(entry)))
-            const collectedFiles = collectedArrays.flat()
+            const collectedFiles = collectedArrays.flat().map(f => ({ file: f, id: Math.random().toString(36).slice(2), progress: 0, status: 'pending', controller: null }))
             setFiles(prevFiles => [...prevFiles, ...collectedFiles])
         } else {
-            const droppedFiles = Array.from(dtFiles)
+            const droppedFiles = Array.from(dtFiles).map(f => ({ file: f, id: Math.random().toString(36).slice(2), progress: 0, status: 'pending', controller: null }))
             setFiles(prevFiles => [...prevFiles, ...droppedFiles])
         }
     }, [])
 
     const handleFileInput = useCallback((e) => {
-        const selectedFiles = Array.from(e.target.files)
-        setFiles(prevFiles => [...prevFiles, ...selectedFiles])
+    const selectedFiles = Array.from(e.target.files).map(f => ({ file: f, id: Math.random().toString(36).slice(2), progress: 0, status: 'pending', controller: null }))
+    setFiles(prevFiles => [...prevFiles, ...selectedFiles])
     }, [])
 
     const removeFile = useCallback((index) => {
@@ -118,29 +119,45 @@ export default function FileDropper({ currentDirectory = "", uploading = false, 
         setUploading(true)
 
         for (let i = 0; i < files.length; i++) {
-            setUploadingIndex(i)
+            const item = files[i]
+            if (item.status === 'done') continue
 
-            const file = files[i]
-            const success = await MultiPartUpload(s3, file, currentDirectory, credentials.name)
+            setUploadingIndex(i)
+            // create an abort controller per file
+            const controller = new AbortController()
+            // update controller and status
+            setFiles(prev => prev.map((it, idx) => idx === i ? { ...it, controller, status: 'uploading', progress: 0 } : it))
+
+            const fileObj = item.file
+            const success = await MultiPartUpload(s3, fileObj, currentDirectory, credentials.name, {
+                onProgress: (uploaded, total) => {
+                    const pct = Math.round((uploaded / total) * 100)
+                    setFiles(prev => prev.map((it, idx) => idx === i ? { ...it, progress: pct } : it))
+                },
+                signal: controller.signal
+            })
 
             if (!success) {
-                console.error(`Upload failed: ${file.name}`)
-                break
+                console.error(`Upload failed: ${fileObj.name}`)
+                setFiles(prev => prev.map((it, idx) => idx === i ? { ...it, status: 'error' } : it))
+                // continue to next file (don't abort whole queue)
+                continue
             }
+
+            setFiles(prev => prev.map((it, idx) => idx === i ? { ...it, status: 'done', progress: 100 } : it))
         }
 
         // Reset
-        setFiles([])
         setUploadingIndex(null)
         setUploading(false)
     }
 
     useEffect(() => {
-        console.log(uploading)
         if (files.length > 0 && !uploading) {
             handleFilesUpload()
         }
-    }, [files, credentials, currentDirectory, uploading])
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [files])
 
     const borderColor = uploading ? 'border-green-500 bg-green-950' : isDragging ? 'border-[#3a3a3a] bg-[#171717]' : 'border-[#252525] bg-[#101010]'
 
@@ -194,33 +211,52 @@ export default function FileDropper({ currentDirectory = "", uploading = false, 
                 </div>
             </div>
 
-            {files.length > 0 && (
+                {files.length > 0 && (
                 <div className="mt-6 space-y-2">
                     <h5 className="font-mono text-xs text-gray-500 mb-2">
-                        {uploading ? `Uploading files... (${uploadingIndex + 1}/${files.length})` : `Selected files (${files.length})`}
+                        {uploading ? `Uploading files...` : `Selected files (${files.length})`}
                     </h5>
 
                     <div className="space-y-2 max-h-48 overflow-y-auto">
-                        {files.map((file, index) => (
+                        {files.map((it, index) => (
                             <div
-                                key={index}
-                                className={`${(uploading == true && uploadingIndex > index) && 'hidden'} flex items-center justify-between p-3 rounded-md ${index === uploadingIndex ? 'bg-green-900 border border-green-600' : 'card'}`}
+                                key={it.id}
+                                className={`flex items-center justify-between p-3 rounded-md ${it.status === 'uploading' ? 'bg-green-900 border border-green-600' : 'card'}`}
                             >
-                                <div className="flex items-center space-x-2">
+                                <div className="flex items-center space-x-2 w-full">
                                     <FileText size={18} className='text-gray-500' />
-                                    <span className="font-mono text-xs text-gray-300 truncate max-w-xs">
-                                        {file.webkitRelativePath || file.relativePath || file.name}
-                                    </span>
+                                    <div className="flex-1">
+                                        <div className="flex items-center justify-between">
+                                            <span className="font-mono text-xs text-gray-300 truncate max-w-xs">
+                                                {it.file.webkitRelativePath || it.file.relativePath || it.file.name}
+                                            </span>
+                                            <span className="font-mono text-xs text-gray-400 ml-2">{it.status === 'uploading' ? `${it.progress}%` : (it.status === 'done' ? 'Done' : (it.status === 'error' ? 'Error' : 'Pending'))}</span>
+                                        </div>
+                                        <div className="h-1 bg-[#111] rounded mt-2 overflow-hidden">
+                                            <div style={{ width: `${it.progress}%` }} className="h-1 bg-green-500 transition-all" />
+                                        </div>
+                                    </div>
                                 </div>
 
-                                {!uploading && (
-                                    <button
-                                        onClick={() => removeFile(index)}
-                                        className="text-gray-500 hover:text-gray-300"
-                                    >
-                                        <X size={18} className='text-gray-500 cursor-pointer' />
-                                    </button>
-                                )}
+                                <div className="ml-3 flex items-center gap-2">
+                                    {it.status === 'uploading' && (
+                                        <button onClick={() => {
+                                            if (it.controller) it.controller.abort()
+                                            setFiles(prev => prev.map((p) => p.id === it.id ? { ...p, status: 'error' } : p))
+                                        }} className="btn btn-ghost">Cancel</button>
+                                    )}
+                                    {it.status === 'error' && (
+                                        <button onClick={() => {
+                                            // mark pending to re-queue
+                                            setFiles(prev => prev.map((p) => p.id === it.id ? { ...p, status: 'pending', progress: 0 } : p))
+                                        }} className="btn btn-ghost">Retry</button>
+                                    )}
+                                    {it.status !== 'uploading' && it.status !== 'done' && (
+                                        <button onClick={() => removeFile(index)} className="text-gray-500 hover:text-gray-300">
+                                            <X size={18} className='text-gray-500 cursor-pointer' />
+                                        </button>
+                                    )}
+                                </div>
                             </div>
                         ))}
                     </div>

@@ -238,7 +238,22 @@ export default function Container() {
                 onRename={async (newName) => {
                     if (!renameTarget) return;
                     if (renameTarget.type === 'folder') {
-                        await renameFolder(s3, renameTarget.key, newName, credentials.name)
+                        // Build new prefix keeping parent path (if any)
+                        // renameTarget.key is expected to be like 'path/to/folder/'
+                        let oldPrefix = renameTarget.key || '';
+                        // Remove trailing slash for easier splitting
+                        const trimmed = oldPrefix.endsWith('/') ? oldPrefix.slice(0, -1) : oldPrefix;
+                        const parts = trimmed.split('/').filter(Boolean);
+                        // Replace last segment with newName
+                        parts[parts.length - 1] = newName;
+                        const newPrefix = parts.length > 0 ? parts.join('/') + '/' : newName + '/';
+                        // No-op if prefixes are identical
+                        if (oldPrefix === newPrefix) {
+                            setIsRenameModalOpen(false);
+                            setRenameTarget(null);
+                            return;
+                        }
+                        await renameFolder(s3, oldPrefix, newPrefix, credentials.name)
                     } else {
                         // Keep the file in the same directory, only change the file name
                         const oldKey = renameTarget.key;

@@ -150,7 +150,7 @@ s3-storage-manager/
 ```
 
 ## 🔌 API (internal modules)
-- `listFiles(s3, prefix, bucket)` — list folders/files using delimiter
+- `listFiles(s3, prefix, bucket, opts?)` — list folders/files using delimiter. Returns `{ items, isTruncated, nextContinuationToken }`. Pass `opts.continuationToken` to fetch next pages.
 - `addFolder(s3, folderPath, bucket)` — create placeholder folder object
 - `deleteFileOrFolder(s3, key, bucket)` — bulk delete with `DeleteObjects`
 - `renameFileOrFolder(s3, oldKey, newKey, bucket)` — copy + delete

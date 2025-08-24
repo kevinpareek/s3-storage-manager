@@ -1,13 +1,12 @@
 import { AbortMultipartUploadCommand, CompleteMultipartUploadCommand, CreateMultipartUploadCommand, UploadPartCommand } from "@aws-sdk/client-s3";
 
 export default async function MultiPartUpload(s3, file, currentDirectory = "/", bucketName = "", opts = {}) {
-    // opts: { onProgress: (uploadedBytes, totalBytes)=>{}, signal: AbortSignal, partSize: number }
-    const { onProgress, signal, partSize } = opts || {}
+    // opts: { onProgress: (uploadedBytes, totalBytes)=>{}, signal: AbortSignal, partSize: number, concurrency: number }
+    const { onProgress, signal, partSize, concurrency } = opts || {}
 
-    const arrayBuffer = await file.arrayBuffer()
-    const buffer = new Uint8Array(arrayBuffer)
+    const fileSize = file.size
     const chunkSize = partSize || (5 * 1024 * 1024)
-    const totalParts = Math.ceil(buffer.length / chunkSize)
+    const totalParts = Math.ceil(fileSize / chunkSize)
     // Ensure currentDirectory has no leading slash and ends with exactly one slash if not root
     let dir = currentDirectory.trim()
     if (dir === "/") {
@@ -33,35 +32,41 @@ export default async function MultiPartUpload(s3, file, currentDirectory = "/", 
         key = createRes.Key
         const parts = []
 
-        // Uploading part by part on S3
+        // Upload parts with limited concurrency and stream slices to avoid loading whole file
+        const maxConcurrency = Math.max(1, Math.min(concurrency || 4, 8))
         let uploadedBytes = 0
-        for (let partNumber = 1; partNumber <= totalParts; partNumber++) {
-            if (signal && signal.aborted) {
-                // Abort requested from caller
-                throw new Error('aborted')
-            }
-            const start = (partNumber - 1) * chunkSize;
-            const end = Math.min(partNumber * chunkSize, buffer.length);
-            const partBuffer = buffer.slice(start, end);
+        let nextPart = 1
 
+        async function uploadOne(partNumber) {
+            if (signal && signal.aborted) throw new Error('aborted')
+            const start = (partNumber - 1) * chunkSize
+            const end = Math.min(partNumber * chunkSize, fileSize)
+            const blob = file.slice(start, end)
+            const arrayBuffer = await blob.arrayBuffer()
+            const body = new Uint8Array(arrayBuffer)
             const uploadRes = await s3.send(new UploadPartCommand({
                 Bucket: bucketName,
                 Key: key,
                 UploadId: uploadId,
                 PartNumber: partNumber,
-                Body: partBuffer,
-            }));
-
-            parts.push({
-                ETag: uploadRes.ETag,
-                PartNumber: partNumber,
-            });
-            // update uploaded bytes and call progress callback
-            uploadedBytes += partBuffer.length
+                Body: body,
+            }))
+            parts.push({ ETag: uploadRes.ETag, PartNumber: partNumber })
+            uploadedBytes += body.length
             if (typeof onProgress === 'function') {
-                try { onProgress(uploadedBytes, buffer.length) } catch (e) { /* ignore */ }
+                try { onProgress(uploadedBytes, fileSize) } catch { }
             }
         }
+
+        const workers = Array.from({ length: Math.min(maxConcurrency, totalParts) }, async () => {
+            while (true) {
+                const current = nextPart
+                nextPart += 1
+                if (current > totalParts) break
+                await uploadOne(current)
+            }
+        })
+        await Promise.all(workers)
 
         await s3.send(new CompleteMultipartUploadCommand({
             Bucket: bucketName,

@@ -9,17 +9,22 @@ import getFolderStats from '../api/getFolderStats'
 import CreateFolderModal from './modals/CreateFolderModal'
 import InfoModal from './modals/InfoModal'
 import RenameModal from './modals/RenameModal'
+import MoveCopyModal from './modals/MoveCopyModal'
 import useCredentials from '../hooks/useCredentials'
 import renameFileOrFolder from '../api/renameFileOrFolder'
 import renameFolder from '../api/renameFolder'
 import searchFilesAndFolders from '../api/searchFilesAndFolders'
 import filterFilesByType from '../helpers/filterFilesByType'
 import { Home } from 'lucide-react'
+import useDebounce from '../hooks/useDebounce'
 
 
 export default function Container() {
     const [refreshFlag, setRefreshFlag] = useState(0);
     const [files, setFiles] = useState([])
+    const [continuationToken, setContinuationToken] = useState(null)
+    const [hasMore, setHasMore] = useState(false)
+    const [hasPaged, setHasPaged] = useState(false)
     const [folderName, setFolderName] = useState('')
     const [currentDirectory, setCurrentDirectory] = useState("/")
     const [isCreateFolderModalOpen, setIsCreateFolderModalOpen] = useState(false)
@@ -27,7 +32,11 @@ export default function Container() {
     const [uploading, setUploading] = useState(false)
     const [isRenameModalOpen, setIsRenameModalOpen] = useState(false)
     const [renameTarget, setRenameTarget] = useState(null)
+    const [moveCopyOpen, setMoveCopyOpen] = useState(false)
+    const [moveCopyMode, setMoveCopyMode] = useState('copy')
+    const [moveCopyItem, setMoveCopyItem] = useState(null)
     const [searchTerm, setSearchTerm] = useState('')
+    const debouncedSearchTerm = useDebounce(searchTerm, 400)
     const [filterType, setFilterType] = useState('all')
     const [loading, setLoading] = useState(false)
     const [infoModalOpen, setInfoModalOpen] = useState(false)
@@ -59,25 +68,45 @@ export default function Container() {
         };
     }, [currentDirectory])
 
-    // Helper to load files for current directory
+    // Helper to load files for current directory (first page)
     const loadFiles = useCallback(async () => {
-        if (!credentials) return;
-    setLoading(true)
-        const location = localStorage.getItem('currentDirectory') || '/';
-        let contents = [];
-        if (searchTerm) {
-            contents = await searchFilesAndFolders(s3, location, searchTerm, credentials.name);
-        } else if (filterType && filterType !== 'all') {
-            contents = await searchFilesAndFolders(s3, location, '', credentials.name);
-        } else {
-            contents = await listFiles(s3, location, credentials.name);
+        // Don't attempt to list when credentials or S3 client are not ready
+        if (!credentials || !s3) return;
+        setLoading(true);
+        try {
+            const location = localStorage.getItem('currentDirectory') || '/';
+            let contents = [];
+            if (debouncedSearchTerm) {
+                contents = await searchFilesAndFolders(s3, location, debouncedSearchTerm, credentials.name);
+                setContinuationToken(null)
+                setHasMore(false)
+                setHasPaged(false)
+            } else if (filterType && filterType !== 'all') {
+                contents = await searchFilesAndFolders(s3, location, '', credentials.name);
+                setContinuationToken(null)
+                setHasMore(false)
+                setHasPaged(false)
+            } else {
+                const res = await listFiles(s3, location, credentials.name);
+                contents = res.items
+                setContinuationToken(res.nextContinuationToken || null)
+                setHasMore(Boolean(res.isTruncated))
+                setHasPaged(false)
+            }
+            if (filterType && filterType !== 'all') {
+                contents = filterFilesByType(contents, filterType);
+            }
+            setFiles(contents);
+        } catch (err) {
+            console.error('Error loading files', err);
+            // clear files on error to avoid stale UI state
+            setFiles([]);
+            setContinuationToken(null)
+            setHasMore(false)
+        } finally {
+            setLoading(false);
         }
-        if (filterType && filterType !== 'all') {
-            contents = filterFilesByType(contents, filterType);
-        }
-        setFiles(contents);
-    setLoading(false)
-    }, [credentials, s3, searchTerm, filterType]);
+    }, [credentials, s3, debouncedSearchTerm, filterType]);
 
     useEffect(() => {
         setCurrentDirectory(localStorage.getItem('currentDirectory') || '/');
@@ -88,7 +117,29 @@ export default function Container() {
             loadFiles();
         }
         // eslint-disable-next-line
-    }, [currentDirectory, uploading, isCreateFolderModalOpen, searchTerm, filterType, refreshFlag, loadFiles]);
+    }, [currentDirectory, uploading, isCreateFolderModalOpen, debouncedSearchTerm, filterType, refreshFlag, loadFiles]);
+
+    const loadMore = useCallback(async () => {
+        if (!credentials || !s3) return;
+        if (!hasMore || !continuationToken) return;
+        setLoading(true);
+        try {
+            const location = localStorage.getItem('currentDirectory') || '/';
+            const res = await listFiles(s3, location, credentials.name, { continuationToken });
+            let nextItems = res.items
+            if (filterType && filterType !== 'all') {
+                nextItems = filterFilesByType(nextItems, filterType)
+            }
+            setFiles(prev => [...prev, ...nextItems])
+            setContinuationToken(res.nextContinuationToken || null)
+            setHasMore(Boolean(res.isTruncated))
+            setHasPaged(true)
+        } catch (err) {
+            console.error('Error loading more files', err)
+        } finally {
+            setLoading(false)
+        }
+    }, [credentials, s3, continuationToken, hasMore, filterType])
 
     // Generate signed URLs when info modal opens for a file
     useEffect(() => {
@@ -219,7 +270,21 @@ export default function Container() {
                                 setInfoItem(item)
                                 setInfoModalOpen(true)
                             }}
+                            onCopy={(item) => { setMoveCopyItem(item); setMoveCopyMode('copy'); setMoveCopyOpen(true) }}
+                            onMove={(item) => { setMoveCopyItem(item); setMoveCopyMode('move'); setMoveCopyOpen(true) }}
                         />
+                        {(!debouncedSearchTerm && (!filterType || filterType === 'all')) && (
+                            <div className='p-4 flex items-center justify-center text-sm'>
+                                {hasMore && (
+                                    <button disabled={loading} onClick={loadMore} className='btn btn-ghost'>
+                                        {loading ? 'Loading…' : 'Load more'}
+                                    </button>
+                                )}
+                                {!hasMore && hasPaged && (
+                                    <span className='text-gray-500'>No more items</span>
+                                )}
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
@@ -271,6 +336,15 @@ export default function Container() {
                     setIsRenameModalOpen(false);
                     setRenameTarget(null);
                     setRefreshFlag(f => f + 1); // trigger file list reload
+                }}
+            />
+            <MoveCopyModal
+                isOpen={moveCopyOpen}
+                onClose={() => setMoveCopyOpen(false)}
+                item={moveCopyItem}
+                mode={moveCopyMode}
+                onDone={(ok) => {
+                    if (ok && moveCopyMode === 'move') setRefreshFlag(f => f + 1)
                 }}
             />
             <InfoModal

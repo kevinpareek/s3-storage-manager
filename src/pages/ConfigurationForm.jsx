@@ -272,7 +272,8 @@ export default function ConfigurationForm() {
                 }
             })
             
-            await listFiles(tempClient, '', formData.name)
+            const res = await listFiles(tempClient, '', formData.name)
+            if (!res || !Array.isArray(res.items)) throw new Error('Bucket not accessible')
 
             // Merge with existing credentials in localStorage
             const stored = localStorage.getItem('credentials')

@@ -6,7 +6,7 @@ import useCredentials from '../hooks/useCredentials'
 
 export default function FileDropper({ currentDirectory = "", uploading = false, setUploading }) {
     const [isDragging, setIsDragging] = useState(false)
-    // files: array of { file: File, id, progress (0-100), status: 'pending'|'uploading'|'done'|'error', controller }
+    // files: array of { file: File, id, progress (0-100), status: 'pending'|'uploading'|'done'|'error'|'conflict'|'skipped', controller, targetKey? }
     const [files, setFiles] = useState([])
     const filesRef = useRef([])
     // per-file upload index not needed; we track per-file state in `files`
@@ -193,7 +193,7 @@ export default function FileDropper({ currentDirectory = "", uploading = false, 
 
         // Fetch existing keys for each group in parallel with caching and pagination
         const existingKeys = new Set()
-        const listPromises = Array.from(filesByPrefix.entries()).map(async ([group, list]) => {
+    const listPromises = Array.from(filesByPrefix.entries()).map(async ([group, list]) => {
             // prefix to list on S3
             const prefix = dir + group
             // check cache first
@@ -241,14 +241,14 @@ export default function FileDropper({ currentDirectory = "", uploading = false, 
         await Promise.all(listPromises)
 
         // Now determine which files conflict based on collected existingKeys
-        for (const [group, list] of filesByPrefix.entries()) {
+    for (const [group, list] of filesByPrefix.entries()) {
             for (const entry of list) {
                 if (existingKeys.has(entry.fullKey)) {
                     existsConflicts++
                     existsNames.push(entry.relPath)
-                    conflictItems.push({ ...entry.item, status: 'conflict', skipReason: 'exists' })
+            conflictItems.push({ ...entry.item, status: 'conflict', skipReason: 'exists', targetKey: entry.fullKey })
                 } else {
-                    toAdd.push(entry.item)
+            toAdd.push({ ...entry.item, targetKey: entry.fullKey })
                 }
             }
         }
@@ -291,6 +291,43 @@ export default function FileDropper({ currentDirectory = "", uploading = false, 
         setFiles(prev => prev.map(p => p.status === 'conflict' ? { ...p, status: 'skipped', skipReason: 'user-skip' } : p))
     }, [])
 
+    function deriveKeepBothKey(originalKey) {
+        // Insert " (1)" before the extension, or append if none
+        const idx = originalKey.lastIndexOf('/')
+        const prefix = idx >= 0 ? originalKey.slice(0, idx + 1) : ''
+        const base = idx >= 0 ? originalKey.slice(idx + 1) : originalKey
+        const dot = base.lastIndexOf('.')
+        const name = dot > 0 ? base.slice(0, dot) : base
+        const ext = dot > 0 ? base.slice(dot) : ''
+        return `${prefix}${name} (1)${ext}`
+    }
+
+    async function pickAvailableKey(startKey) {
+        // Try startKey, then (1), (2), ... until free
+        if (!s3 || !credentials) return startKey
+        let key = startKey
+        let attempt = 1
+        while (true) {
+            try {
+                await s3.send(new HeadObjectCommand({ Bucket: credentials.name, Key: key }))
+                // exists -> bump index
+                const idx = key.lastIndexOf('/')
+                const prefix = idx >= 0 ? key.slice(0, idx + 1) : ''
+                const base = idx >= 0 ? key.slice(idx + 1) : key
+                const dot = base.lastIndexOf('.')
+                const name = dot > 0 ? base.slice(0, dot) : base
+                const ext = dot > 0 ? base.slice(dot) : ''
+                attempt += 1
+                key = `${prefix}${name} (${attempt})${ext}`
+            } catch (e) {
+                const code = e?.$metadata?.httpStatusCode
+                if (code === 404) return key
+                // On other errors, bail out and use the proposed key
+                return key
+            }
+        }
+    }
+
     async function handleFilesUpload() {
         setUploading(true)
 
@@ -310,7 +347,8 @@ export default function FileDropper({ currentDirectory = "", uploading = false, 
                     setFiles(prev => prev.map((it) => it.id === item.id ? { ...it, progress: pct } : it))
                 },
                 signal: controller.signal,
-                concurrency: 4
+                concurrency: 4,
+                targetKey: item.targetKey // may be keep-both or normal
             })
 
             if (!success) {
@@ -517,9 +555,15 @@ export default function FileDropper({ currentDirectory = "", uploading = false, 
                                                         <span className="text-xs text-yellow-300 font-mono">Conflict</span>
                                                         <button onClick={async () => {
                                                             // Replace: mark pending and set a flag to force upload (we'll reuse existing upload which overwrites by default)
-                                                            setFiles(prev => prev.map(p => p.id === it.id ? { ...p, status: 'pending', progress: 0, skipReason: undefined } : p))
+                                                            setFiles(prev => prev.map(p => p.id === it.id ? { ...p, status: 'pending', progress: 0, skipReason: undefined, /* keep same key to overwrite */ targetKey: it.targetKey } : p))
                                                         }} className="btn btn-ghost">Replace</button>
                                                         <button onClick={() => setFiles(prev => prev.map(p => p.id === it.id ? { ...p, status: 'skipped', skipReason: 'user-skip' } : p))} className="btn btn-ghost">Skip</button>
+                                                        <button onClick={async () => {
+                                                            // Keep both: compute a new available key and upload there
+                                                            const baseKey = deriveKeepBothKey(it.targetKey || '')
+                                                            const freeKey = await pickAvailableKey(baseKey)
+                                                            setFiles(prev => prev.map(p => p.id === it.id ? { ...p, status: 'pending', progress: 0, skipReason: undefined, targetKey: freeKey } : p))
+                                                        }} className="btn btn-ghost">Keep Both</button>
                                                     </div>
                                                 )}
                                             </div>

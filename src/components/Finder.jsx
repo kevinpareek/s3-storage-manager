@@ -75,7 +75,7 @@ export default function Finder({ contents = [], setCurrentDirectory, onRename, o
             <div className='divide-y divide-[#252525]'>
                 {/* Header row with select all when there are contents */}
                 {!loading && contents.length > 0 && (
-                    <div className='flex items-center justify-between px-4 py-2 bg-[#0f0f0f] sticky top-[52px]'>
+                    <div className='flex items-center justify-between px-3 sm:px-4 py-2 bg-[#0f0f0f] md:sticky md:top-[52px]'>
                         <label className='inline-flex items-center gap-2 text-xs text-gray-300'>
                             <input
                                 type='checkbox'
@@ -97,8 +97,8 @@ export default function Finder({ contents = [], setCurrentDirectory, onRename, o
                     </div>
                 ) : contents.length > 0 ? (
                     contents.map((content, index) => (
-                        <div key={index} className={`relative flex items-center justify-between px-4 py-3 hover:bg-[#0f0f0f] transition-colors ${selectedKeys.has(content.key) ? 'bg-[#0c0c0c]' : ''}`}>
-                            <span className='flex items-center gap-3'>
+                        <div key={index} className={`relative flex items-center justify-between px-3 sm:px-4 py-3 hover:bg-[#0f0f0f] transition-colors ${selectedKeys.has(content.key) ? 'bg-[#0c0c0c]' : ''}`}>
+                            <span className='flex items-center gap-3 min-w-0'>
                                 <input type='checkbox' checked={selectedKeys.has(content.key)} onChange={() => onToggleSelect && onToggleSelect(content)} />
                                 {content.type === 'folder' ? (
                                     <Folder size={18} className='text-yellow-500' />
@@ -117,9 +117,9 @@ export default function Finder({ contents = [], setCurrentDirectory, onRename, o
                                     })()
                                 )}
 
-                                <div>
+                                <div className='min-w-0'>
                                     <p
-                                        className={`text-yellow-500 cursor-pointer text-xs font-mono`}
+                                        className={`text-yellow-500 cursor-pointer text-xs font-mono truncate max-w-[55vw] sm:max-w-none`}
                                         onClick={() => {
                                             if (content.type === 'folder') {
                                                 setCurrentDirectory('/' + content.key)
@@ -169,14 +169,14 @@ export default function Finder({ contents = [], setCurrentDirectory, onRename, o
                                             );
                                         }
                                         return (
-                                            <span className="block text-[10px] font-mono ml-1">
+                                            <span className="block text-[10px] font-mono ml-1 break-words">
                                                 {breadcrumb}
                                             </span>
                                         );
                                     })()}
                                 </div>
                             </span>
-                            <div className='flex items-center gap-4'>
+                            <div className='flex items-center gap-4 ml-3 flex-shrink-0'>
                                 <Info
                                     size={18}
                                     className='text-blue-300 cursor-pointer'

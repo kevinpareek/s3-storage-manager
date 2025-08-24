@@ -8,6 +8,7 @@ import getFilePreview from '../api/getFilePreview'
 import getFolderStats from '../api/getFolderStats'
 import CreateFolderModal from './modals/CreateFolderModal'
 import InfoModal from './modals/InfoModal'
+import PreviewModal from './modals/PreviewModal'
 import RenameModal from './modals/RenameModal'
 import MoveCopyModal from './modals/MoveCopyModal'
 import BulkDeleteModal from './modals/BulkDeleteModal'
@@ -42,6 +43,8 @@ export default function Container() {
     const [loading, setLoading] = useState(false)
     const [infoModalOpen, setInfoModalOpen] = useState(false)
     const [infoItem, setInfoItem] = useState(null)
+    const [previewOpen, setPreviewOpen] = useState(false)
+    const [previewItem, setPreviewItem] = useState(null)
     const [shareUrl, setShareUrl] = useState(null)
     const [downloadUrl, setDownloadUrl] = useState(null)
     const [isGeneratingUrls, setIsGeneratingUrls] = useState(false)
@@ -196,42 +199,7 @@ export default function Container() {
         <div className='w-full px-4 py-4 pb-20'>
             <div className='w-full max-w-6xl mx-auto card divide-y divide-[#252525]'>
                 <div className='w-full p-4 flex items-center justify-between'>
-                    <h4 className='font-mono text-sm text-gray-400 select-none flex items-center gap-1'>
-                        {/* Breadcrumbs: Home + folders, clickable, like Finder */}
-                        {(() => {
-                            // Remove trailing slash for folders (if any)
-                            let path = currentDirectory;
-                            if (path !== '/' && path.endsWith('/')) path = path.slice(0, -1);
-                            const parts = path.split('/').filter(Boolean);
-                            let breadcrumb = [];
-                            // Home icon
-                            breadcrumb.push(
-                                <span key="home">
-                                    <Home
-                                        size={16}
-                                        className="inline align-middle text-blue-400 cursor-pointer hover:underline mr-1"
-                                        onClick={() => handleSetCurrentDirectory('/')}
-                                    />
-                                    {parts.length > 0 && <span className="text-gray-400">/</span>}
-                                </span>
-                            );
-                            for (let idx = 0; idx < parts.length; idx++) {
-                                const absPath = '/' + parts.slice(0, idx + 1).join('/');
-                                breadcrumb.push(
-                                    <span key={absPath}>
-                                        <span
-                                            className="text-blue-400 cursor-pointer hover:underline"
-                                            onClick={() => handleSetCurrentDirectory(absPath)}
-                                        >
-                                            {parts[idx]}
-                                        </span>
-                                        {idx < parts.length - 1 && <span className="text-gray-400">/</span>}
-                                    </span>
-                                );
-                            }
-                            return <span className="flex items-center flex-wrap">{breadcrumb}</span>;
-                        })()}
-                    </h4>
+                    <h4 className='font-mono text-sm text-gray-300 select-none'>Storage</h4>
                     <div className='flex items-center gap-2'>
                         <input
                             type="text"
@@ -260,6 +228,50 @@ export default function Container() {
                         <button onClick={() => setIsCreateFolderModalOpen(true)} className='btn btn-primary'>Add Folder</button>
                     </div>
                 </div>
+                {/* Drag & Drop above path */}
+                <div className='p-4 bg-[#101010]'>
+                    <FileDropper
+                        currentDirectory={currentDirectory}
+                        uploading={uploading}
+                        setUploading={setUploading}
+                    />
+                </div>
+                {/* Breadcrumbs moved below header */}
+                <div className='w-full px-4 py-2 bg-[#0f0f0f] border-t border-b border-[#202020]'>
+                    <div className='font-mono text-[12px] text-gray-400 select-none flex items-center gap-1'>
+                        {(() => {
+                            let path = currentDirectory;
+                            if (path !== '/' && path.endsWith('/')) path = path.slice(0, -1);
+                            const parts = path.split('/').filter(Boolean);
+                            let breadcrumb = [];
+                            breadcrumb.push(
+                                <span key="home">
+                                    <Home
+                                        size={14}
+                                        className="inline align-middle text-blue-400 cursor-pointer hover:underline mr-1"
+                                        onClick={() => handleSetCurrentDirectory('/')}
+                                    />
+                                    {parts.length > 0 && <span className="text-gray-500">/</span>}
+                                </span>
+                            );
+                            for (let idx = 0; idx < parts.length; idx++) {
+                                const absPath = '/' + parts.slice(0, idx + 1).join('/');
+                                breadcrumb.push(
+                                    <span key={absPath}>
+                                        <span
+                                            className="text-blue-400 cursor-pointer hover:underline"
+                                            onClick={() => handleSetCurrentDirectory(absPath)}
+                                        >
+                                            {parts[idx]}
+                                        </span>
+                                        {idx < parts.length - 1 && <span className="text-gray-500">/</span>}
+                                    </span>
+                                );
+                            }
+                            return <span className="flex items-center flex-wrap">{breadcrumb}</span>;
+                        })()}
+                    </div>
+                </div>
                 {selectedKeys.size > 0 && (
                     <div className='w-full p-3 bg-[#0e0e0e] border-t border-b border-[#202020] flex items-center justify-between'>
                         <div className='text-xs font-mono text-gray-300'>
@@ -273,13 +285,6 @@ export default function Container() {
                         </div>
                     </div>
                 )}
-                <div className='p-4 bg-[#101010]'>
-                    <FileDropper
-                        currentDirectory={currentDirectory}
-                        uploading={uploading}
-                        setUploading={setUploading}
-                    />
-                </div>
                 <div className='bg-[#101010] rounded-b-xl'>
                     <div>
                         <Finder
@@ -287,6 +292,8 @@ export default function Container() {
                             currentDirectory={currentDirectory}
                             loading={loading}
                             setCurrentDirectory={handleSetCurrentDirectory}
+                            showItemPath={Boolean(debouncedSearchTerm) || (filterType && filterType !== 'all')}
+                            onPreview={(item) => { setPreviewItem(item); setPreviewOpen(true) }}
                             selectedKeys={selectedKeys}
                             onToggleSelect={(item) => {
                                 setSelectedKeys(prev => {
@@ -417,6 +424,11 @@ export default function Container() {
                 shareUrl={shareUrl}
                 downloadUrl={downloadUrl}
                 isGenerating={isGeneratingUrls}
+            />
+            <PreviewModal
+                isOpen={previewOpen}
+                onClose={() => setPreviewOpen(false)}
+                item={previewItem}
             />
         </div>
     )

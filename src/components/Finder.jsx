@@ -1,11 +1,11 @@
-import { Folder, LoaderCircle, Home, MoreVertical, Info } from 'lucide-react'
-import getFilePreview from '../api/getFilePreview'
+import { Folder, LoaderCircle, Home, MoreVertical, Info, Image as ImageIcon, Video as VideoIcon, Music as MusicIcon, FileText, Code, Archive } from 'lucide-react'
 import deleteFileOrFolder from '../api/deleteFileOrFolder'
 import useCredentials from '../hooks/useCredentials'
 import { useState } from 'react'
 import DeleteConfirmModal from './modals/DeleteConfirmModal'
+import { fileCategory } from '../helpers/mimeGuess'
 
-export default function Finder({ contents = [], setCurrentDirectory, onRename, onDelete, onOpenInfo, onCopy, onMove, loading = false, selectedKeys = new Set(), onToggleSelect, onToggleSelectAll, onSelectFromContext }) {
+export default function Finder({ contents = [], setCurrentDirectory, onRename, onDelete, onOpenInfo, onCopy, onMove, onPreview, showItemPath = false, loading = false, selectedKeys = new Set(), onToggleSelect, onToggleSelectAll, onSelectFromContext }) {
 
     const { s3, credentials } = useCredentials()
     const [isDeletingFileOrFolder, setIsDeletingFileOrFolder] = useState(false)
@@ -14,18 +14,8 @@ export default function Finder({ contents = [], setCurrentDirectory, onRename, o
     const [deleteTarget, setDeleteTarget] = useState(null) // { key, type, name }
     const [openMenuKey, setOpenMenuKey] = useState(null)
 
-    async function handleFilePreview(key) {
-        try {
-            if (!s3 || !credentials) {
-                console.error('S3 client or credentials not ready for preview');
-                return;
-            }
-            console.log("Previweing", credentials)
-            const previewUrl = await getFilePreview(s3, key, false, credentials.name)
-            window.open(previewUrl, '_blank')
-        } catch (err) {
-            console.error('Error previewing file', err)
-        }
+    function handleFilePreview(item) {
+        if (onPreview) onPreview(item)
     }
 
     async function handleDeleteFileOrFolder({ key, type }) {
@@ -85,7 +75,7 @@ export default function Finder({ contents = [], setCurrentDirectory, onRename, o
             <div className='divide-y divide-[#252525]'>
                 {/* Header row with select all when there are contents */}
                 {!loading && contents.length > 0 && (
-                    <div className='flex items-center justify-between px-4 py-2 bg-[#0f0f0f] sticky top-[52px] z-10'>
+                    <div className='flex items-center justify-between px-4 py-2 bg-[#0f0f0f] sticky top-[52px]'>
                         <label className='inline-flex items-center gap-2 text-xs text-gray-300'>
                             <input
                                 type='checkbox'
@@ -110,27 +100,38 @@ export default function Finder({ contents = [], setCurrentDirectory, onRename, o
                         <div key={index} className={`relative flex items-center justify-between px-4 py-3 hover:bg-[#0f0f0f] transition-colors ${selectedKeys.has(content.key) ? 'bg-[#0c0c0c]' : ''}`}>
                             <span className='flex items-center gap-3'>
                                 <input type='checkbox' checked={selectedKeys.has(content.key)} onChange={() => onToggleSelect && onToggleSelect(content)} />
-                                {
-                                    // Render files like folders visually
-                                    <Folder
-                                        size={18}
-                                        className='text-yellow-500'
-                                    />
-                                }
+                                {content.type === 'folder' ? (
+                                    <Folder size={18} className='text-yellow-500' />
+                                ) : (
+                                    (() => {
+                                        const cat = fileCategory(content.name)
+                                        switch (cat) {
+                                            case 'image': return <ImageIcon size={18} className='text-pink-400' />
+                                            case 'video': return <VideoIcon size={18} className='text-purple-400' />
+                                            case 'audio': return <MusicIcon size={18} className='text-green-400' />
+                                            case 'document': return <FileText size={18} className='text-blue-400' />
+                                            case 'code': return <Code size={18} className='text-cyan-400' />
+                                            case 'archive': return <Archive size={18} className='text-orange-400' />
+                                            default: return <FileText size={18} className='text-gray-400' />
+                                        }
+                                    })()
+                                )}
 
                                 <div>
                                     <p
                                         className={`text-yellow-500 cursor-pointer text-xs font-mono`}
                                         onClick={() => {
-                                            if (content.type == 'folder') {
+                                            if (content.type === 'folder') {
                                                 setCurrentDirectory('/' + content.key)
+                                            } else {
+                                                handleFilePreview(content)
                                             }
                                         }}
                                     >
                                         {content.name}
                                     </p>
-                                    {/* Show path if not in root */}
-                                    {content.key && content.key.split('/').filter(Boolean).length > 1 && (() => {
+                                    {/* Show path only when searching/filtering, because items can be from different folders */}
+                                    {showItemPath && content.key && content.key.split('/').filter(Boolean).length > 1 && (() => {
                                         // Remove the trailing slash for folders
                                         let path = content.key;
                                         if (content.type === 'folder' && path.endsWith('/')) path = path.slice(0, -1);
@@ -199,7 +200,7 @@ export default function Finder({ contents = [], setCurrentDirectory, onRename, o
                                         </div>
                                     ) : (
                                         <div>
-                                            <div role='button' tabIndex={0} className='px-3 py-2 text-xs hover:bg-[#232323]' onClick={() => handleFilePreview(content.key)}>Preview</div>
+                                            <div role='button' tabIndex={0} className='px-3 py-2 text-xs hover:bg-[#232323]' onClick={() => handleFilePreview(content)}>Preview</div>
                                             <div role='button' tabIndex={0} className='px-3 py-2 text-xs hover:bg-[#232323]' onClick={() => handleFileDownload(content.key)}>Download</div>
                                         </div>
                                     )}

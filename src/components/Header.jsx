@@ -1,6 +1,6 @@
 
 import { useNavigate } from "react-router-dom";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import useCredentials from '../hooks/useCredentials';
 
 export default function Header() {
@@ -27,7 +27,15 @@ export default function Header() {
 
 
     // Close dropdown on outside click
-    // (Optional: can add useEffect for click outside)
+    useEffect(() => {
+        function onDocClick(e) {
+            if (!dropdownOpen) return;
+            const el = dropdownRef.current;
+            if (el && !el.contains(e.target)) setDropdownOpen(false);
+        }
+        document.addEventListener('mousedown', onDocClick);
+        return () => document.removeEventListener('mousedown', onDocClick);
+    }, [dropdownOpen]);
 
     return (
         <div className='bg-[#181818] w-full p-4 border-b border-[#202020] sticky top-0 z-20'>

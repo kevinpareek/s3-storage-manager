@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 
 
-export default function RenameModal({ isOpen, handleClose, oldName, onRename }) {
+export default function RenameModal({ isOpen, handleClose, oldName, onRename, lockExtension = true }) {
 	// Split oldName into base name and extension
 	const getNameParts = (name) => {
 		const lastDot = name.lastIndexOf('.');
@@ -30,7 +30,11 @@ export default function RenameModal({ isOpen, handleClose, oldName, onRename }) 
 		if (isRenaming) return;
 		setIsRenaming(true);
 		try {
-			await onRename(newBaseName + extension);
+			if (lockExtension) {
+				await onRename(newBaseName + extension);
+			} else {
+				await onRename(newBaseName);
+			}
 		} finally {
 			setIsRenaming(false);
 		}

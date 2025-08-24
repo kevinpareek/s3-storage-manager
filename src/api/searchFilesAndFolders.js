@@ -49,6 +49,11 @@ async function getAllFoldersAndFiles(s3, prefix, bucketName) {
 
 export default async function searchFilesAndFolders(s3, prefix, searchTerm, bucketName) {
     const allItems = await getAllFoldersAndFiles(s3, prefix, bucketName);
+        if (!s3) {
+            const err = new Error('S3 client is not initialized');
+            console.error(err);
+            throw err;
+        }
     return allItems.filter(item => {
         if (item.type === 'folder') {
             return (item.fullName || item.key || '').toLowerCase().includes(searchTerm.toLowerCase());

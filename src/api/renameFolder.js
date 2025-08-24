@@ -28,7 +28,7 @@ export default async function renameFolder(s3, oldPrefix, newPrefix, bucketName)
         }
         await s3.send(new CopyObjectCommand({
             Bucket: bucketName,
-            CopySource: `${bucketName}/${oldKey}`,
+            CopySource: encodeURI(`${bucketName}/${oldKey}`),
             Key: newKey
         }))
         await s3.send(new DeleteObjectCommand({

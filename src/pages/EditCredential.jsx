@@ -37,9 +37,35 @@ export default function EditCredential() {
 			toast.error('All fields are required');
 			return;
 		}
-		localStorage.setItem('credentials', JSON.stringify(formData));
-		toast.success('Credentials updated!');
-		setTimeout(() => navigate('/'), 1000);
+		// Preserve existing credentials and replace only the selected one
+		try {
+			let stored = localStorage.getItem('credentials');
+			let newList = [];
+			if (Array.isArray(credentialsList) && credentialsList.length) {
+				// Use list from context as the source of truth
+				newList = [...credentialsList];
+				newList[selectedCredentialIndex] = { ...formData };
+			} else if (stored) {
+				// Fallback to localStorage parsing
+				const parsed = JSON.parse(stored);
+				if (Array.isArray(parsed)) {
+					newList = [...parsed];
+					newList[selectedCredentialIndex] = { ...formData };
+				} else if (parsed && typeof parsed === 'object') {
+					newList = [{ ...formData }];
+				}
+			} else {
+				newList = [{ ...formData }];
+			}
+
+			localStorage.setItem('credentials', JSON.stringify(newList));
+			if (setCredentialsList) setCredentialsList(newList);
+			toast.success('Credentials updated!');
+			setTimeout(() => navigate('/'), 800);
+		} catch (err) {
+			console.error('Failed to update credentials', err);
+			toast.error('Failed to update credentials');
+		}
 	}
 
 	function handleDelete() {

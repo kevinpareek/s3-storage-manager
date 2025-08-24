@@ -39,8 +39,8 @@ export default function Header() {
 
     return (
         <div className='bg-[#181818] w-full p-4 border-b border-[#202020] sticky top-0 z-20'>
-            <div className='w-full max-w-6xl mx-auto flex items-center justify-between'>
-                <div className='flex items-center gap-2 select-none'>
+            <div className='w-full max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-3'>
+                <div className='flex items-center gap-2 select-none min-w-0'>
                     <img src='/logo.svg' alt='Logo' className='w-6 h-6 rounded-sm' />
                     <h3 className='text-xl font-semibold text-gray-200 flex items-center gap-2'>
                         <span>S3</span>
@@ -48,14 +48,14 @@ export default function Header() {
                     </h3>
                 </div>
 
-                <div className='flex items-center gap-2'>
+                <div className='flex items-center gap-2 flex-wrap min-w-0'>
                     <div className='relative'>
                         <div
-                            className='surface px-4 py-2 flex items-center gap-2 rounded-md select-none cursor-pointer min-w-[140px]'
+                            className='surface px-3 py-2 flex items-center gap-2 rounded-md select-none cursor-pointer min-w-0 md:min-w-[140px]'
                             onClick={() => setDropdownOpen((v) => !v)}
                         >
                             <div className='w-2 h-2 aspect-square rounded-full bg-green-400 animate-pulse' />
-                            <p className='text-xs text-gray-300 truncate max-w-[100px]'>
+                            <p className='text-xs text-gray-300 truncate max-w-[120px] md:max-w-[180px]'>
                                 {credentials?.name || 'No Credential'}
                             </p>
                             <svg className='w-3 h-3 text-gray-400 ml-1' fill='none' stroke='currentColor' strokeWidth='2' viewBox='0 0 24 24'>

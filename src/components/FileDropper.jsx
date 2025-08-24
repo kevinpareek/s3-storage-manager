@@ -411,7 +411,7 @@ export default function FileDropper({ currentDirectory = "", uploading = false, 
                     </p>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap justify-center">
                     <label className="btn btn-ghost cursor-pointer">
                         <input
                             type="file"
@@ -452,12 +452,12 @@ export default function FileDropper({ currentDirectory = "", uploading = false, 
 
                 {files.length > 0 && (
                 <div className="mt-6 space-y-2">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
                         <div>
                             <h5 className="font-mono text-sm text-gray-200">Upload queue</h5>
                             <div className="font-mono text-xs text-gray-400">{`${files.filter(f => f.status === 'done').length}/${files.length} files uploaded`}</div>
                         </div>
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2 flex-wrap">
                                     <button onClick={() => setFiles([])} className="btn btn-ghost">Clear</button>
                                     <button onClick={replaceAllConflicts} className="btn btn-ghost">Replace All</button>
                                     <button onClick={skipAllConflicts} className="btn btn-ghost">Skip All</button>
@@ -506,7 +506,7 @@ export default function FileDropper({ currentDirectory = "", uploading = false, 
                                                 <FileText size={16} className='text-gray-500' />
                                                 <div className="flex-1">
                                                     <div className="flex items-center justify-between">
-                                                        <span className="font-mono text-xs text-gray-300 truncate max-w-xs">
+                                                        <span className="font-mono text-xs text-gray-300 truncate max-w-[50vw] sm:max-w-xs">
                                                             {it.displayName}
                                                         </span>
                                                         <div className="flex items-center gap-2">

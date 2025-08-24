@@ -196,22 +196,22 @@ export default function Container() {
     }, [infoModalOpen, infoItem])
 
     return (
-        <div className='w-full px-4 py-4 pb-20'>
+        <div className='w-full px-2 sm:px-4 py-4 pb-24'>
             <div className='w-full max-w-6xl mx-auto card divide-y divide-[#252525]'>
-                <div className='w-full p-4 flex items-center justify-between'>
-                    <h4 className='font-mono text-sm text-gray-300 select-none'>Storage</h4>
-                    <div className='flex items-center gap-2'>
+                <div className='w-full p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2'>
+                    <h4 className='font-mono text-sm text-gray-300 select-none'>🗑️ {credentials?.name || 'No Credential'}</h4>
+                    <div className='flex items-center gap-2 flex-wrap'>
                         <input
                             type="text"
                             placeholder="Search files/folders"
                             value={searchTerm}
                             onChange={e => setSearchTerm(e.target.value)}
-                            className="input text-xs mr-2"
+                            className="input text-xs mr-0 sm:mr-2 w-full sm:w-auto"
                         />
                         <select
                             value={filterType}
                             onChange={e => setFilterType(e.target.value)}
-                            className="file-type-select input text-xs mr-2"
+                            className="file-type-select input text-xs mr-0 sm:mr-2 w-full sm:w-auto"
                         >
                             <option value="all">All Files</option>
                             <option value="image">Images</option>
@@ -237,7 +237,7 @@ export default function Container() {
                     />
                 </div>
                 {/* Breadcrumbs moved below header */}
-                <div className='w-full px-4 py-2 bg-[#0f0f0f] border-t border-b border-[#202020]'>
+                <div className='w-full px-3 sm:px-4 py-2 bg-[#0f0f0f] border-t border-b border-[#202020]'>
                     <div className='font-mono text-[12px] text-gray-400 select-none flex items-center gap-1'>
                         {(() => {
                             let path = currentDirectory;
@@ -268,16 +268,16 @@ export default function Container() {
                                     </span>
                                 );
                             }
-                            return <span className="flex items-center flex-wrap">{breadcrumb}</span>;
+                            return <span className="flex items-center flex-wrap gap-1 break-words">{breadcrumb}</span>;
                         })()}
                     </div>
                 </div>
                 {selectedKeys.size > 0 && (
-                    <div className='w-full p-3 bg-[#0e0e0e] border-t border-b border-[#202020] flex items-center justify-between'>
+                    <div className='w-full p-3 bg-[#0e0e0e] border-t border-b border-[#202020] flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between'>
                         <div className='text-xs font-mono text-gray-300'>
                             {selectedKeys.size} selected
                         </div>
-                        <div className='flex items-center gap-2'>
+                        <div className='flex items-center gap-2 flex-wrap'>
                             <button className='btn btn-ghost' onClick={() => { setMoveCopyItem(Array.from(selectedKeys).map(k => files.find(f => f.key === k)).filter(Boolean)); setMoveCopyMode('copy'); setMoveCopyOpen(true) }}>Copy</button>
                             <button className='btn btn-ghost' onClick={() => { setMoveCopyItem(Array.from(selectedKeys).map(k => files.find(f => f.key === k)).filter(Boolean)); setMoveCopyMode('move'); setMoveCopyOpen(true) }}>Move</button>
                             <button className='btn btn-danger' onClick={() => setBulkDeleteOpen(true)}>Delete</button>

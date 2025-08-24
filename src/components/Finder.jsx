@@ -2,7 +2,7 @@ import { Folder, LoaderCircle, Home, MoreVertical, Info, Image as ImageIcon, Vid
 import deleteFileOrFolder from '../api/deleteFileOrFolder'
 import getFilePreview from '../api/getFilePreview'
 import useCredentials from '../hooks/useCredentials'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import DeleteConfirmModal from './modals/DeleteConfirmModal'
 import { fileCategory } from '../helpers/mimeGuess'
 
@@ -14,6 +14,22 @@ export default function Finder({ contents = [], setCurrentDirectory, onRename, o
     const [deleteModalOpen, setDeleteModalOpen] = useState(false)
     const [deleteTarget, setDeleteTarget] = useState(null) // { key, type, name }
     const [openMenuKey, setOpenMenuKey] = useState(null)
+
+    // Close the context menu on outside click or when pressing Escape
+    useEffect(() => {
+        function handleDocumentClick() {
+            setOpenMenuKey(null)
+        }
+        function handleKeyDown(e) {
+            if (e.key === 'Escape') setOpenMenuKey(null)
+        }
+        document.addEventListener('click', handleDocumentClick)
+        document.addEventListener('keydown', handleKeyDown)
+        return () => {
+            document.removeEventListener('click', handleDocumentClick)
+            document.removeEventListener('keydown', handleKeyDown)
+        }
+    }, [])
 
     function handleFilePreview(item) {
         if (onPreview) onPreview(item)
@@ -197,13 +213,13 @@ export default function Finder({ contents = [], setCurrentDirectory, onRename, o
                                      onClick={(e) => e.stopPropagation()}>
                     {content.type === 'folder' ? (
                                         <div>
-                                            <div role='button' tabIndex={0} className='px-3 py-2 text-xs hover:bg-[#232323]' onClick={() => setCurrentDirectory('/' + content.key)}>Open</div>
+                                            <div role='button' tabIndex={0} className='px-3 py-2 text-xs hover:bg-[#232323]' onClick={() => { setOpenMenuKey(null); setCurrentDirectory('/' + content.key) }}>Open</div>
                         <div role='button' tabIndex={0} className='px-3 py-2 text-xs hover:bg-[#232323]' onClick={() => { setOpenMenuKey(null); onDownloadFolder && onDownloadFolder(content) }}>Download as ZIP</div>
                                         </div>
                                     ) : (
                                         <div>
-                                            <div role='button' tabIndex={0} className='px-3 py-2 text-xs hover:bg-[#232323]' onClick={() => handleFilePreview(content)}>Preview</div>
-                                            <div role='button' tabIndex={0} className='px-3 py-2 text-xs hover:bg-[#232323]' onClick={() => handleFileDownload(content.key)}>Download</div>
+                                            <div role='button' tabIndex={0} className='px-3 py-2 text-xs hover:bg-[#232323]' onClick={() => { setOpenMenuKey(null); handleFilePreview(content) }}>Preview</div>
+                                            <div role='button' tabIndex={0} className='px-3 py-2 text-xs hover:bg-[#232323]' onClick={() => { setOpenMenuKey(null); handleFileDownload(content.key) }}>Download</div>
                                         </div>
                                     )}
                                     <div className='border-t border-[#232323]' />

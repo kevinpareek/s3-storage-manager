@@ -4,7 +4,6 @@ import { useEffect, useState, useCallback } from 'react'
 import FileDropper from './FileDropper'
 import Finder from './Finder'
 import listFiles from '../api/listFiles'
-import getFilePreview from '../api/getFilePreview'
 import getFolderStats from '../api/getFolderStats'
 import CreateFolderModal from './modals/CreateFolderModal'
 import InfoModal from './modals/InfoModal'
@@ -17,7 +16,9 @@ import renameFileOrFolder from '../api/renameFileOrFolder'
 import renameFolder from '../api/renameFolder'
 import searchFilesAndFolders from '../api/searchFilesAndFolders'
 import filterFilesByType from '../helpers/filterFilesByType'
-import { Home } from 'lucide-react'
+import { Home, LoaderCircle } from 'lucide-react'
+import downloadSelectionAsZip from '../api/downloadSelectionAsZip'
+import getFilePreview from '../api/getFilePreview'
 import useDebounce from '../hooks/useDebounce'
 
 
@@ -51,6 +52,7 @@ export default function Container() {
     // Bulk selection
     const [selectedKeys, setSelectedKeys] = useState(new Set())
     const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
+    const [downloading, setDownloading] = useState(false)
 
     const handleSetCurrentDirectory = useCallback(
         (location) => {
@@ -196,6 +198,7 @@ export default function Container() {
     }, [infoModalOpen, infoItem])
 
     return (
+        <>
         <div className='w-full px-2 sm:px-4 py-4 pb-24'>
             <div className='w-full max-w-6xl mx-auto card divide-y divide-[#252525]'>
                 <div className='w-full p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2'>
@@ -280,6 +283,34 @@ export default function Container() {
                         <div className='flex items-center gap-2 flex-wrap'>
                             <button className='btn btn-ghost' onClick={() => { setMoveCopyItem(Array.from(selectedKeys).map(k => files.find(f => f.key === k)).filter(Boolean)); setMoveCopyMode('copy'); setMoveCopyOpen(true) }}>Copy</button>
                             <button className='btn btn-ghost' onClick={() => { setMoveCopyItem(Array.from(selectedKeys).map(k => files.find(f => f.key === k)).filter(Boolean)); setMoveCopyMode('move'); setMoveCopyOpen(true) }}>Move</button>
+                            <button
+                                className='btn btn-ghost'
+                                disabled={downloading}
+                                onClick={async () => {
+                                    setDownloading(true)
+                                    try {
+                                        const items = Array.from(selectedKeys).map(k => files.find(f => f.key === k)).filter(Boolean)
+                                        if (items.length === 1 && items[0].type === 'file') {
+                                            // direct download
+                                            const url = await getFilePreview(s3, items[0].key, true, credentials.name)
+                                            window.open(url, 'download')
+                                        } else {
+                                            await downloadSelectionAsZip(s3, items, credentials.name, '')
+                                        }
+                                    } finally {
+                                        setDownloading(false)
+                                    }
+                                }}
+                            >
+                                {downloading ? (
+                                    <span className='inline-flex items-center gap-2'>
+                                        <LoaderCircle size={14} className='animate-spin text-yellow-400' />
+                                        Preparing…
+                                    </span>
+                                ) : (
+                                    'Download'
+                                )}
+                            </button>
                             <button className='btn btn-danger' onClick={() => setBulkDeleteOpen(true)}>Delete</button>
                             <button className='btn btn-ghost' onClick={() => setSelectedKeys(new Set())}>Clear</button>
                         </div>
@@ -321,6 +352,15 @@ export default function Container() {
                             }}
                             onCopy={(item) => { setMoveCopyItem(item); setMoveCopyMode('copy'); setMoveCopyOpen(true) }}
                             onMove={(item) => { setMoveCopyItem(item); setMoveCopyMode('move'); setMoveCopyOpen(true) }}
+                            onDownloadFolder={async (item) => {
+                                if (!item) return
+                                setDownloading(true)
+                                try {
+                                    await downloadSelectionAsZip(s3, [item], credentials.name, '')
+                                } finally {
+                                    setDownloading(false)
+                                }
+                            }}
                             onSelectFromContext={(item) => {
                                 setSelectedKeys(prev => {
                                     const next = new Set(prev)
@@ -430,6 +470,15 @@ export default function Container() {
                 onClose={() => setPreviewOpen(false)}
                 item={previewItem}
             />
-        </div>
+    </div>
+    {downloading && (
+            <div className='fixed bottom-4 right-4 bg-[#181818] border border-[#232323] shadow-lg rounded-md px-3 py-2 text-xs text-gray-200 z-50'>
+                <span className='inline-flex items-center gap-2'>
+                    <LoaderCircle size={14} className='animate-spin text-yellow-400' />
+                    Preparing download…
+                </span>
+            </div>
+        )}
+    </>
     )
 }

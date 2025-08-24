@@ -6,15 +6,18 @@ export default function BulkDeleteModal({ isOpen, onClose, items = [], onDone })
     const { s3, credentials } = useCredentials()
     const [busy, setBusy] = useState(false)
     const [progress, setProgress] = useState(0)
+    const [confirmText, setConfirmText] = useState("")
 
     useEffect(() => {
-        if (!isOpen) { setBusy(false); setProgress(0) }
+        if (!isOpen) { setBusy(false); setProgress(0); setConfirmText("") }
     }, [isOpen])
 
     if (!isOpen) return null
 
     async function handleDelete() {
         if (busy) return
+        // Require exact confirmation
+        if ((confirmText || "").trim().toUpperCase() !== 'DELETE') return
         setBusy(true)
         try {
             let done = 0
@@ -43,8 +46,34 @@ export default function BulkDeleteModal({ isOpen, onClose, items = [], onDone })
                         <div className='h-2 bg-red-500 transition-all' style={{ width: `${progress}%` }} />
                     </div>
                 )}
+                {!busy && (
+                    <div className='flex flex-col items-start gap-1 mb-4'>
+                        <label htmlFor='confirm' className='text-sm text-gray-400'>
+                            Type DELETE to confirm
+                        </label>
+                        <input
+                            id='confirm'
+                            type='text'
+                            className='input w-full text-sm'
+                            placeholder='DELETE'
+                            value={confirmText}
+                            onChange={(e) => setConfirmText(e.target.value)}
+                            autoFocus
+                            disabled={busy}
+                        />
+                        {confirmText && confirmText.trim().toUpperCase() !== 'DELETE' && (
+                            <span className='text-[11px] text-red-400'>Confirmation text must be exactly DELETE</span>
+                        )}
+                    </div>
+                )}
                 <div className='flex items-center flex-row-reverse gap-2'>
-                    <button className='btn btn-danger' onClick={handleDelete} disabled={busy}>{busy ? 'Deleting…' : 'Delete'}</button>
+                    <button
+                        className='btn btn-danger'
+                        onClick={handleDelete}
+                        disabled={busy || (confirmText || '').trim().toUpperCase() !== 'DELETE'}
+                    >
+                        {busy ? 'Deleting…' : 'Delete'}
+                    </button>
                     <button className='btn btn-ghost' onClick={onClose} disabled={busy}>Cancel</button>
                 </div>
             </div>

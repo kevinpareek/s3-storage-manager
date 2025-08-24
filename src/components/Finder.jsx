@@ -1,11 +1,12 @@
 import { Folder, LoaderCircle, Home, MoreVertical, Info, Image as ImageIcon, Video as VideoIcon, Music as MusicIcon, FileText, Code, Archive } from 'lucide-react'
 import deleteFileOrFolder from '../api/deleteFileOrFolder'
+import getFilePreview from '../api/getFilePreview'
 import useCredentials from '../hooks/useCredentials'
 import { useState } from 'react'
 import DeleteConfirmModal from './modals/DeleteConfirmModal'
 import { fileCategory } from '../helpers/mimeGuess'
 
-export default function Finder({ contents = [], setCurrentDirectory, onRename, onDelete, onOpenInfo, onCopy, onMove, onPreview, showItemPath = false, loading = false, selectedKeys = new Set(), onToggleSelect, onToggleSelectAll, onSelectFromContext }) {
+export default function Finder({ contents = [], setCurrentDirectory, onRename, onDelete, onOpenInfo, onCopy, onMove, onPreview, onDownloadFolder, showItemPath = false, loading = false, selectedKeys = new Set(), onToggleSelect, onToggleSelectAll, onSelectFromContext }) {
 
     const { s3, credentials } = useCredentials()
     const [isDeletingFileOrFolder, setIsDeletingFileOrFolder] = useState(false)
@@ -194,9 +195,10 @@ export default function Finder({ contents = [], setCurrentDirectory, onRename, o
                             {openMenuKey === content.key && (
                                 <div className='absolute right-4 top-full mt-1 w-44 bg-[#181818] border border-[#232323] rounded-md shadow-lg z-40'
                                      onClick={(e) => e.stopPropagation()}>
-                                    {content.type === 'folder' ? (
+                    {content.type === 'folder' ? (
                                         <div>
                                             <div role='button' tabIndex={0} className='px-3 py-2 text-xs hover:bg-[#232323]' onClick={() => setCurrentDirectory('/' + content.key)}>Open</div>
+                        <div role='button' tabIndex={0} className='px-3 py-2 text-xs hover:bg-[#232323]' onClick={() => { setOpenMenuKey(null); onDownloadFolder && onDownloadFolder(content) }}>Download as ZIP</div>
                                         </div>
                                     ) : (
                                         <div>

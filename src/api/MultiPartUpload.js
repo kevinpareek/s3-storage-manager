@@ -1,8 +1,8 @@
 import { AbortMultipartUploadCommand, CompleteMultipartUploadCommand, CreateMultipartUploadCommand, UploadPartCommand } from "@aws-sdk/client-s3";
 
 export default async function MultiPartUpload(s3, file, currentDirectory = "/", bucketName = "", opts = {}) {
-    // opts: { onProgress: (uploadedBytes, totalBytes)=>{}, signal: AbortSignal, partSize: number, concurrency: number }
-    const { onProgress, signal, partSize, concurrency } = opts || {}
+    // opts: { onProgress: (uploadedBytes, totalBytes)=>{}, signal: AbortSignal, partSize: number, concurrency: number, targetKey?: string }
+    const { onProgress, signal, partSize, concurrency, targetKey } = opts || {}
 
     const fileSize = file.size
     const chunkSize = partSize || (5 * 1024 * 1024)
@@ -16,7 +16,8 @@ export default async function MultiPartUpload(s3, file, currentDirectory = "/", 
     }
     // Use the webkitRelativePath or our synthetic relativePath to preserve folder structure
     const relativeKey = (file.webkitRelativePath || file.relativePath || file.name).replace(/^\/+/, "")
-    const filePath = dir + relativeKey;
+    // If a full target key is provided, use it; otherwise compose from directory + relative path
+    const filePath = (typeof targetKey === 'string' && targetKey.length > 0) ? targetKey : (dir + relativeKey);
     let uploadId = ''
     let key = ''
 

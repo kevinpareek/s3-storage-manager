@@ -10,6 +10,7 @@ import CreateFolderModal from './modals/CreateFolderModal'
 import InfoModal from './modals/InfoModal'
 import RenameModal from './modals/RenameModal'
 import MoveCopyModal from './modals/MoveCopyModal'
+import BulkDeleteModal from './modals/BulkDeleteModal'
 import useCredentials from '../hooks/useCredentials'
 import renameFileOrFolder from '../api/renameFileOrFolder'
 import renameFolder from '../api/renameFolder'
@@ -44,11 +45,16 @@ export default function Container() {
     const [shareUrl, setShareUrl] = useState(null)
     const [downloadUrl, setDownloadUrl] = useState(null)
     const [isGeneratingUrls, setIsGeneratingUrls] = useState(false)
+    // Bulk selection
+    const [selectedKeys, setSelectedKeys] = useState(new Set())
+    const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
 
     const handleSetCurrentDirectory = useCallback(
         (location) => {
             localStorage.setItem('currentDirectory', location)
             setCurrentDirectory(location)
+            // Clear selection on navigation
+            setSelectedKeys(new Set())
         }, [])
 
     function handleBack() {
@@ -97,6 +103,13 @@ export default function Container() {
                 contents = filterFilesByType(contents, filterType);
             }
             setFiles(contents);
+            // Drop selections that aren't in the current list anymore
+            setSelectedKeys(prev => {
+                const next = new Set()
+                const keys = new Set((contents || []).map(c => c.key))
+                prev.forEach(k => { if (keys.has(k)) next.add(k) })
+                return next
+            })
         } catch (err) {
             console.error('Error loading files', err);
             // clear files on error to avoid stale UI state
@@ -247,6 +260,19 @@ export default function Container() {
                         <button onClick={() => setIsCreateFolderModalOpen(true)} className='btn btn-primary'>Add Folder</button>
                     </div>
                 </div>
+                {selectedKeys.size > 0 && (
+                    <div className='w-full p-3 bg-[#0e0e0e] border-t border-b border-[#202020] flex items-center justify-between'>
+                        <div className='text-xs font-mono text-gray-300'>
+                            {selectedKeys.size} selected
+                        </div>
+                        <div className='flex items-center gap-2'>
+                            <button className='btn btn-ghost' onClick={() => { setMoveCopyItem(Array.from(selectedKeys).map(k => files.find(f => f.key === k)).filter(Boolean)); setMoveCopyMode('copy'); setMoveCopyOpen(true) }}>Copy</button>
+                            <button className='btn btn-ghost' onClick={() => { setMoveCopyItem(Array.from(selectedKeys).map(k => files.find(f => f.key === k)).filter(Boolean)); setMoveCopyMode('move'); setMoveCopyOpen(true) }}>Move</button>
+                            <button className='btn btn-danger' onClick={() => setBulkDeleteOpen(true)}>Delete</button>
+                            <button className='btn btn-ghost' onClick={() => setSelectedKeys(new Set())}>Clear</button>
+                        </div>
+                    </div>
+                )}
                 <div className='p-4 bg-[#101010]'>
                     <FileDropper
                         currentDirectory={currentDirectory}
@@ -261,6 +287,22 @@ export default function Container() {
                             currentDirectory={currentDirectory}
                             loading={loading}
                             setCurrentDirectory={handleSetCurrentDirectory}
+                            selectedKeys={selectedKeys}
+                            onToggleSelect={(item) => {
+                                setSelectedKeys(prev => {
+                                    const next = new Set(prev)
+                                    if (next.has(item.key)) next.delete(item.key)
+                                    else next.add(item.key)
+                                    return next
+                                })
+                            }}
+                            onToggleSelectAll={() => {
+                                setSelectedKeys(prev => {
+                                    if (prev.size === files.length) return new Set()
+                                    const next = new Set(files.map(f => f.key))
+                                    return next
+                                })
+                            }}
                             onRename={(item) => {
                                 setRenameTarget(item)
                                 setIsRenameModalOpen(true)
@@ -272,6 +314,14 @@ export default function Container() {
                             }}
                             onCopy={(item) => { setMoveCopyItem(item); setMoveCopyMode('copy'); setMoveCopyOpen(true) }}
                             onMove={(item) => { setMoveCopyItem(item); setMoveCopyMode('move'); setMoveCopyOpen(true) }}
+                            onSelectFromContext={(item) => {
+                                setSelectedKeys(prev => {
+                                    const next = new Set(prev)
+                                    if (next.has(item.key)) next.delete(item.key)
+                                    else next.add(item.key)
+                                    return next
+                                })
+                            }}
                         />
                         {(!debouncedSearchTerm && (!filterType || filterType === 'all')) && (
                             <div className='p-4 flex items-center justify-center text-sm'>
@@ -341,10 +391,23 @@ export default function Container() {
             <MoveCopyModal
                 isOpen={moveCopyOpen}
                 onClose={() => setMoveCopyOpen(false)}
-                item={moveCopyItem}
+                item={Array.isArray(moveCopyItem) ? null : moveCopyItem}
+                items={Array.isArray(moveCopyItem) ? moveCopyItem : null}
                 mode={moveCopyMode}
                 onDone={(ok) => {
                     if (ok && moveCopyMode === 'move') setRefreshFlag(f => f + 1)
+                    setSelectedKeys(new Set())
+                }}
+            />
+            {/* Bulk Delete */}
+            <BulkDeleteModal
+                isOpen={bulkDeleteOpen}
+                onClose={() => setBulkDeleteOpen(false)}
+                items={Array.from(selectedKeys).map(k => files.find(f => f.key === k)).filter(Boolean)}
+                onDone={() => {
+                    setBulkDeleteOpen(false)
+                    setSelectedKeys(new Set())
+                    setRefreshFlag(f => f + 1)
                 }}
             />
             <InfoModal

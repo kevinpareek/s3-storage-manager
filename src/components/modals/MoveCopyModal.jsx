@@ -5,7 +5,7 @@ import renameFileOrFolder from '../../api/renameFileOrFolder'
 import deleteFileOrFolder from '../../api/deleteFileOrFolder'
 import headObjectExists from '../../api/headObjectExists'
 
-export default function MoveCopyModal({ isOpen, onClose, item, mode = 'copy', onDone }) {
+export default function MoveCopyModal({ isOpen, onClose, item, items = null, mode = 'copy', onDone }) {
 	const { s3, credentials } = useCredentials()
 	const [targetPrefix, setTargetPrefix] = useState('')
 	const [action, setAction] = useState('skip') // skip | replace | rename
@@ -25,7 +25,8 @@ export default function MoveCopyModal({ isOpen, onClose, item, mode = 'copy', on
 
 
 
-	if (!isOpen || !item) return null
+	const multi = Array.isArray(items) && items.length > 0
+	if (!isOpen || (!item && !multi)) return null
 
 	async function handleSubmit(e) {
 		e.preventDefault()
@@ -38,10 +39,11 @@ export default function MoveCopyModal({ isOpen, onClose, item, mode = 'copy', on
 			dst = dst.replace(/^\/+/, '')
 			// if user typed a directory-like path but item is folder and they didn't include trailing '/', we'll add it later when composing
 
-			const src = item.key
-			let finalDest = dst
-			const srcIsFolder = item.type === 'folder'
-			const lastSeg = dst.split('/').filter(Boolean).pop() || ''
+			async function processOne(curItem) {
+				const src = curItem.key
+				let finalDest = dst
+				const srcIsFolder = curItem.type === 'folder'
+				const lastSeg = dst.split('/').filter(Boolean).pop() || ''
 			const dstLooksDir = (
 				// empty means current directory
 				dst === '' ||
@@ -73,9 +75,7 @@ export default function MoveCopyModal({ isOpen, onClose, item, mode = 'copy', on
 			let destKey = finalDest
 			if (exists) {
 				if (action === 'skip') {
-					onDone && onDone(false)
-					onClose()
-					return
+					return false
 				}
 				if (action === 'rename') {
 					const parts = finalDest.split('/')
@@ -98,8 +98,28 @@ export default function MoveCopyModal({ isOpen, onClose, item, mode = 'copy', on
 				await copyObjectOrFolder(s3, src, destKey, credentials.name)
 				await deleteFileOrFolder(s3, src, credentials.name)
 			}
-			onDone && onDone(true)
-			onClose()
+			return true
+			}
+
+			if (multi) {
+				let any = false
+				for (const it of items) {
+					try {
+						const ok = await processOne(it)
+						any = any || ok
+					} catch (e) {
+						console.error('Bulk move/copy error for', it?.key, e)
+					}
+				}
+				onDone && onDone(any)
+				onClose()
+				return
+			} else {
+				const ok = await processOne(item)
+				onDone && onDone(ok)
+				onClose()
+				return
+			}
 		} finally {
 			setBusy(false)
 		}
@@ -108,7 +128,7 @@ export default function MoveCopyModal({ isOpen, onClose, item, mode = 'copy', on
 	return (
 		<div className='w-full h-full fixed top-0 left-0 bg-[#000]/50 backdrop-blur-sm flex items-center justify-center px-2 z-50'>
 			<div className='w-full max-w-lg card p-5'>
-				<h1 className='font-semibold text-xl mb-6 text-white'>{mode === 'copy' ? 'Copy' : 'Move'} Item</h1>
+				<h1 className='font-semibold text-xl mb-6 text-white'>{mode === 'copy' ? 'Copy' : 'Move'} {multi ? `${items.length} items` : 'Item'}</h1>
 				<form onSubmit={handleSubmit} className='space-y-4'>
 					<div>
 						<label className='text-sm text-gray-400'>Destination path or folder</label>

@@ -5,7 +5,7 @@ import useCredentials from '../hooks/useCredentials'
 import { useState } from 'react'
 import DeleteConfirmModal from './modals/DeleteConfirmModal'
 
-export default function Finder({ contents = [], setCurrentDirectory, onRename, onDelete, onOpenInfo, onCopy, onMove, loading = false }) {
+export default function Finder({ contents = [], setCurrentDirectory, onRename, onDelete, onOpenInfo, onCopy, onMove, loading = false, selectedKeys = new Set(), onToggleSelect, onToggleSelectAll, onSelectFromContext }) {
 
     const { s3, credentials } = useCredentials()
     const [isDeletingFileOrFolder, setIsDeletingFileOrFolder] = useState(false)
@@ -83,14 +83,33 @@ export default function Finder({ contents = [], setCurrentDirectory, onRename, o
     return (
         <>
             <div className='divide-y divide-[#252525]'>
+                {/* Header row with select all when there are contents */}
+                {!loading && contents.length > 0 && (
+                    <div className='flex items-center justify-between px-4 py-2 bg-[#0f0f0f] sticky top-[52px] z-10'>
+                        <label className='inline-flex items-center gap-2 text-xs text-gray-300'>
+                            <input
+                                type='checkbox'
+                                checked={selectedKeys.size > 0 && selectedKeys.size === contents.length}
+                                ref={el => {
+                                    if (!el) return
+                                    el.indeterminate = selectedKeys.size > 0 && selectedKeys.size < contents.length
+                                }}
+                                onChange={() => onToggleSelectAll && onToggleSelectAll()}
+                            />
+                            Select all
+                        </label>
+                        <span className='text-[11px] text-gray-500 font-mono'>Items: {contents.length}</span>
+                    </div>
+                )}
                 {loading ? (
                     <div className="flex items-center justify-center py-8">
                         <LoaderCircle size={22} className="animate-spin text-yellow-400" />
                     </div>
                 ) : contents.length > 0 ? (
                     contents.map((content, index) => (
-                        <div key={index} className='relative flex items-center justify-between px-4 py-3 hover:bg-[#0f0f0f] transition-colors'>
+                        <div key={index} className={`relative flex items-center justify-between px-4 py-3 hover:bg-[#0f0f0f] transition-colors ${selectedKeys.has(content.key) ? 'bg-[#0c0c0c]' : ''}`}>
                             <span className='flex items-center gap-3'>
+                                <input type='checkbox' checked={selectedKeys.has(content.key)} onChange={() => onToggleSelect && onToggleSelect(content)} />
                                 {
                                     // Render files like folders visually
                                     <Folder
@@ -185,6 +204,7 @@ export default function Finder({ contents = [], setCurrentDirectory, onRename, o
                                         </div>
                                     )}
                                     <div className='border-t border-[#232323]' />
+                                    <div role='button' tabIndex={0} className='px-3 py-2 text-xs hover:bg-[#232323]' onClick={() => { setOpenMenuKey(null); onSelectFromContext && onSelectFromContext(content) }}>{selectedKeys.has(content.key) ? 'Deselect' : 'Select'}</div>
                                     <div role='button' tabIndex={0} className='px-3 py-2 text-xs hover:bg-[#232323]' onClick={() => { setOpenMenuKey(null); onCopy && onCopy(content) }}>Copy to…</div>
                                     <div role='button' tabIndex={0} className='px-3 py-2 text-xs hover:bg-[#232323]' onClick={() => { setOpenMenuKey(null); onMove && onMove(content) }}>Move to…</div>
                                     <div role='button' tabIndex={0} className='px-3 py-2 text-xs hover:bg-[#232323]' onClick={() => { setOpenMenuKey(null); onRename && onRename(content) }}>Rename</div>

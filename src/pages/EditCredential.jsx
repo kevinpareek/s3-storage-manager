@@ -12,7 +12,8 @@ export default function EditCredential() {
 		access_key: '',
 		secret_key: '',
 		region: '',
-		endpoint: ''
+		endpoint: '',
+		publicUrl: ''
 	});
 
 	useEffect(() => {
@@ -22,7 +23,8 @@ export default function EditCredential() {
 				access_key: credentials.access_key || '',
 				secret_key: credentials.secret_key || '',
 				region: credentials.region || '',
-				endpoint: credentials.endpoint || ''
+				endpoint: credentials.endpoint || '',
+				publicUrl: credentials.publicUrl || ''
 			});
 		}
 	}, [credentials]);
@@ -100,6 +102,7 @@ export default function EditCredential() {
 				<input className="input" name="region" placeholder="Region" value={formData.region} onChange={handleChange} />
                 <input className="input" name="name" placeholder="Bucket Name" value={formData.name} onChange={handleChange} />
 				<input className="input" name="endpoint" placeholder="Endpoint" value={formData.endpoint} onChange={handleChange} />
+				<input className="input" name="publicUrl" placeholder="Public Base URL (optional)" value={formData.publicUrl} onChange={handleChange} />
 				<button type="submit" className="btn btn-primary mt-2">Save</button>
 					<div className="flex items-center gap-2">
 						<button type="button" className="text-xs text-gray-400 hover:underline mt-2" onClick={() => navigate('/')}>Cancel</button>

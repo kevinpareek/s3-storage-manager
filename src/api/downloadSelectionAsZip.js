@@ -11,7 +11,7 @@ async function fetchAsArrayBuffer(url) {
 
 // Download a mix of files and folders as a single ZIP.
 // items: array of { type: 'file'|'folder', key: string, name: string }
-export default async function downloadSelectionAsZip(s3, items, bucketName, rootPrefixForZip = '') {
+export default async function downloadSelectionAsZip(s3, items, bucketName, rootPrefixForZip = '', publicBaseUrl = '') {
     const zip = new JSZip();
 
     // Normalize the zip root folder inside archive (optional)
@@ -41,7 +41,7 @@ export default async function downloadSelectionAsZip(s3, items, bucketName, root
 
     // Fetch all files and add to zip
     for (const entry of fileEntries) {
-        const url = await getFilePreview(s3, entry.key, false, bucketName);
+    const url = await getFilePreview(s3, entry.key, false, bucketName, publicBaseUrl);
         const buf = await fetchAsArrayBuffer(url);
         zip.file(entry.zipPath, buf);
     }

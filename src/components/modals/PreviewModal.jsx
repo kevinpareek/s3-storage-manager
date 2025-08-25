@@ -36,7 +36,7 @@ export default function PreviewModal({ isOpen, onClose, item }) {
       setLoading(true)
       setError(null)
       try {
-        const signedUrl = await getFilePreview(s3, item.key, false, credentials?.name)
+  const signedUrl = await getFilePreview(s3, item.key, false, credentials?.name, credentials?.publicUrl)
         if (cancelled) return
         setUrl(signedUrl)
         // For editor/text-like modes, fetch the content via fetch; signedUrl is temporary

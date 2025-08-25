@@ -13,7 +13,8 @@ export default function ConfigurationForm() {
         secret_key: '',
         access_key: '',
         region: '',
-        endpoint: ''
+    endpoint: '',
+    publicUrl: ''
     })
     const { credentials, credentialsList, setCredentialsList } = useCredentials()
     const navigate = useNavigate()
@@ -308,7 +309,8 @@ export default function ConfigurationForm() {
                 secret_key: '',
                 access_key: '',
                 region: '',
-                endpoint: ''
+                endpoint: '',
+                publicUrl: ''
             })
             return navigate('/')
 
@@ -320,7 +322,8 @@ export default function ConfigurationForm() {
                 secret_key: '',
                 access_key: '',
                 region: '',
-                endpoint: ''
+                endpoint: '',
+                publicUrl: ''
             })
             return
         }
@@ -406,6 +409,20 @@ export default function ConfigurationForm() {
                                 className='input w-full text-sm'
                                 placeholder='eg. https://s3.amazonaws.com or https://nyc3.digitaloceanspaces.com'
                             />
+                        </div>
+                        <div className='flex flex-col items-start gap-1'>
+                            <label htmlFor="publicUrl" className='text-sm text-gray-400'>
+                                Public Base URL (optional)
+                            </label>
+                            <input
+                                type="text"
+                                name='publicUrl'
+                                value={formData.publicUrl}
+                                onChange={(e) => setFormData({ ...formData, publicUrl: e.target.value })}
+                                className='input w-full text-sm'
+                                placeholder='eg. https://cdn.example.com/bucket (no trailing slash)'
+                            />
+                            <span className='text-[11px] text-gray-500 mt-1'>If set, View/Download/Preview links will use this base instead of signed URLs.</span>
                         </div>
                         <button type='submit' className='btn btn-primary w-full text-sm mt-4'>
                             Connect

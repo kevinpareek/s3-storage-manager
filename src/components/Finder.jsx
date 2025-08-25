@@ -78,7 +78,7 @@ export default function Finder({ contents = [], setCurrentDirectory, onRename, o
                 console.error('S3 client or credentials not ready for download');
                 return;
             }
-            const previewUrl = await getFilePreview(s3, key, true, credentials.name)
+            const previewUrl = await getFilePreview(s3, key, true, credentials.name, credentials.publicUrl)
             window.open(previewUrl, 'download')
         } catch (err) {
             console.error('Error downloading file', err)

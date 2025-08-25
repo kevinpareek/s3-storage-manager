@@ -169,8 +169,8 @@ export default function Container() {
             setIsGeneratingUrls(true)
             try {
                 if (infoItem.type === 'file') {
-                    const share = await getFilePreview(s3, infoItem.key, false, credentials.name)
-                    const dl = await getFilePreview(s3, infoItem.key, true, credentials.name)
+                    const share = await getFilePreview(s3, infoItem.key, false, credentials.name, credentials.publicUrl)
+                    const dl = await getFilePreview(s3, infoItem.key, true, credentials.name, credentials.publicUrl)
                     if (!mounted) return
                     setShareUrl(share)
                     setDownloadUrl(dl)
@@ -292,10 +292,10 @@ export default function Container() {
                                         const items = Array.from(selectedKeys).map(k => files.find(f => f.key === k)).filter(Boolean)
                                         if (items.length === 1 && items[0].type === 'file') {
                                             // direct download
-                                            const url = await getFilePreview(s3, items[0].key, true, credentials.name)
+                                            const url = await getFilePreview(s3, items[0].key, true, credentials.name, credentials.publicUrl)
                                             window.open(url, 'download')
                                         } else {
-                                            await downloadSelectionAsZip(s3, items, credentials.name, '')
+                                            await downloadSelectionAsZip(s3, items, credentials.name, '', credentials.publicUrl)
                                         }
                                     } finally {
                                         setDownloading(false)
@@ -356,7 +356,7 @@ export default function Container() {
                                 if (!item) return
                                 setDownloading(true)
                                 try {
-                                    await downloadSelectionAsZip(s3, [item], credentials.name, '')
+                                    await downloadSelectionAsZip(s3, [item], credentials.name, '', credentials.publicUrl)
                                 } finally {
                                     setDownloading(false)
                                 }

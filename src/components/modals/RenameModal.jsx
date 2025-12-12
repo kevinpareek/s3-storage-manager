@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 
 
-export default function RenameModal({ isOpen, handleClose, oldName, onRename, lockExtension = true }) {
+export default function RenameModal({ isOpen, handleClose, oldName, onRename }) {
 	// Split oldName into base name and extension
 	const getNameParts = (name) => {
 		const lastDot = name.lastIndexOf('.');
@@ -18,7 +18,7 @@ export default function RenameModal({ isOpen, handleClose, oldName, onRename, lo
 	// Sync newBaseName with oldName whenever modal opens or oldName changes
 	useEffect(() => {
 		if (isOpen) {
-			const [b, _e] = getNameParts(oldName || '');
+			const [b] = getNameParts(oldName || '');
 			setNewBaseName(b);
 		}
 	}, [isOpen, oldName]);
@@ -30,18 +30,15 @@ export default function RenameModal({ isOpen, handleClose, oldName, onRename, lo
 		if (isRenaming) return;
 		setIsRenaming(true);
 		try {
-			if (lockExtension) {
-				await onRename(newBaseName + extension);
-			} else {
-				await onRename(newBaseName);
-			}
+			// Always preserve extension (lockExtension is always true)
+			await onRename(newBaseName + extension);
 		} finally {
 			setIsRenaming(false);
 		}
 	};
 
 	return (
-		<div className="w-full h-full fixed top-0 left-0 bg-[#000]/50 backdrop-blur-sm flex items-center justify-center px-2">
+		<div className="w-full h-full fixed top-0 left-0 bg-[#000]/50 backdrop-blur-sm flex items-center justify-center px-2 z-50">
 			<div className="w-full max-w-lg card p-5">
 				<h1 className="font-semibold text-xl mb-6 bg-gradient-to-r from-orange-300 to-red-400 bg-clip-text text-transparent">
 					Rename

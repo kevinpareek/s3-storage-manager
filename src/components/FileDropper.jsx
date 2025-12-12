@@ -131,8 +131,6 @@ export default function FileDropper({ currentDirectory = "", uploading = false, 
         return `${Math.round(v * 10) / 10} ${units[i]}`
     }
 
-    // (removed unused helper getFileOriginalPath)
-
     // keep ref in sync to avoid stale closures when checking queued files
     useEffect(() => { filesRef.current = files }, [files])
 

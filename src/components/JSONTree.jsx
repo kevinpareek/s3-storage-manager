@@ -1,14 +1,3 @@
-import React from 'react'
-
-function Line({ depth, label, isLast }) {
-  return (
-    <div className="text-[11px] font-mono text-gray-300">
-      <span className="text-gray-500">{Array(depth).fill('  ').join('')}</span>
-      {label}{!isLast ? ',' : ''}
-    </div>
-  )
-}
-
 export default function JSONTree({ data }) {
   try {
     const json = typeof data === 'string' ? JSON.parse(data) : data

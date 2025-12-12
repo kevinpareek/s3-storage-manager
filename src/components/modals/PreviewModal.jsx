@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import useCredentials from '../../hooks/useCredentials'
 import getFilePreview from '../../api/getFilePreview'
 import putTextObject from '../../api/putTextObject'

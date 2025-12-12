@@ -1,8 +1,8 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import addFolder from '../../api/addFolder'
 import useCredentials from '../../hooks/useCredentials'
 
-export default function CreateFolderModal({ isOpen, handleClose, currentDirectory = "", setCurrentDirectory, folderName, setFolderName }) {
+export default function CreateFolderModal({ isOpen, handleClose, currentDirectory = "", folderName, setFolderName }) {
 
 	const { s3, credentials } = useCredentials()
 	const [isCreating, setIsCreating] = useState(false)
@@ -39,7 +39,7 @@ export default function CreateFolderModal({ isOpen, handleClose, currentDirector
 	}
 
 	return (
-		<div className='w-full h-full fixed top-0 left-0 bg-[#000]/50 backdrop-blur-sm flex items-center justify-center px-2'>
+		<div className='w-full h-full fixed top-0 left-0 bg-[#000]/50 backdrop-blur-sm flex items-center justify-center px-2 z-50'>
 			<div className='w-full max-w-lg card p-5'>
 				<h1 className='font-semibold text-xl mb-6 bg-gradient-to-r from-orange-300 to-red-400 bg-clip-text text-transparent'>
 					Add Folder

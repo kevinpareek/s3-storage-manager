@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import useCredentials from '../hooks/useCredentials'
 import { S3Client } from '@aws-sdk/client-s3'
@@ -18,11 +18,6 @@ export default function ConfigurationForm() {
     })
     const { setCredentialsList } = useCredentials()
     const navigate = useNavigate()
-    const [copiedCors, setCopiedCors] = useState(false)
-    const [copiedPolicy, setCopiedPolicy] = useState(false)
-    const [copiedR2Endpoint, setCopiedR2Endpoint] = useState(false)
-    const [copiedR2Region, setCopiedR2Region] = useState(false)
-    const [copiedR2Cors, setCopiedR2Cors] = useState(false)
     const [copiedKey, setCopiedKey] = useState(null)
     const [selectedProvider, setSelectedProvider] = useState('aws')
     const [providerSearch, setProviderSearch] = useState('')
@@ -49,110 +44,8 @@ export default function ConfigurationForm() {
     }
 ]`
 
-    async function handleCopyCors() {
-        try {
-            await navigator.clipboard.writeText(corsJson)
-            setCopiedCors(true)
-            setTimeout(() => setCopiedCors(false), 1500)
-        } catch (err) {
-            console.error('Failed to copy CORS JSON', err)
-        }
-    }
-
-    const bucketName = formData.name || '<your-bucket-name>'
-    const policyJson = `{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": [
-        "s3:ListBucket"
-      ],
-      "Resource": [
-        "arn:aws:s3:::${bucketName}"
-      ]
-    },
-    {
-      "Effect": "Allow",
-      "Action": [
-        "s3:GetObject",
-        "s3:PutObject",
-        "s3:DeleteObject"
-      ],
-      "Resource": [
-        "arn:aws:s3:::${bucketName}/*"
-      ]
-    }
-  ]
-}`
-
-    async function handleCopyPolicy() {
-        try {
-            await navigator.clipboard.writeText(policyJson)
-            setCopiedPolicy(true)
-            setTimeout(() => setCopiedPolicy(false), 1500)
-        } catch (err) {
-            console.error('Failed to copy Policy JSON', err)
-        }
-    }
-
     const r2EndpointTemplate = 'https://<accountid>.r2.cloudflarestorage.com'
     const r2Region = 'auto'
-    const r2CorsJson = `[
-    {
-        "AllowedHeaders": [
-            "*"
-        ],
-        "AllowedMethods": [
-            "GET",
-            "PUT",
-            "POST",
-            "DELETE",
-            "HEAD"
-        ],
-        "AllowedOrigins": [
-            "*"
-        ],
-        "ExposeHeaders": [
-            "ETag"
-        ],
-        "MaxAgeSeconds": 3000
-    }
-]`
-
-    async function handleCopyR2Endpoint() {
-        try {
-            await navigator.clipboard.writeText(r2EndpointTemplate)
-            setCopiedR2Endpoint(true)
-            setTimeout(() => setCopiedR2Endpoint(false), 1500)
-        } catch (err) {
-            console.error('Failed to copy R2 endpoint', err)
-        }
-    }
-
-    async function handleCopyR2Region() {
-        try {
-            await navigator.clipboard.writeText(r2Region)
-            setCopiedR2Region(true)
-            setTimeout(() => setCopiedR2Region(false), 1500)
-        } catch (err) {
-            console.error('Failed to copy R2 region', err)
-        }
-    }
-
-    async function handleCopyR2Cors() {
-        try {
-            await navigator.clipboard.writeText(r2CorsJson)
-            setCopiedR2Cors(true)
-            setTimeout(() => setCopiedR2Cors(false), 1500)
-        } catch (err) {
-            console.error('Failed to copy R2 CORS JSON', err)
-        }
-    }
-
-    function toggleSection(key) {
-        setOpenSection((prev) => (prev === key ? null : key))
-    }
 
     async function copyText(id, text) {
         try {
@@ -510,12 +403,12 @@ export default function ConfigurationForm() {
                         <div className='card-2 p-4'>
                             <div className='flex items-center justify-between px-1'>
                                 <span className='text-xs text-gray-400'>CORS Configuration</span>
-                                <button onClick={() => copyText(`${selectedProvider}-cors`, selectedProvider === 'r2' ? r2CorsJson : corsJson)} className='btn btn-ghost text-[11px] py-1'>
+                                <button onClick={() => copyText(`${selectedProvider}-cors`, corsJson)} className='btn btn-ghost text-[11px] py-1'>
                                     {copiedKey === `${selectedProvider}-cors` ? '✅ Copied' : '📋 Copy'}
                                 </button>
                             </div>
                             <pre className='text-xs overflow-x-auto p-3 mt-2 text-gray-200'>
-{selectedProvider === 'r2' ? r2CorsJson : corsJson}
+{corsJson}
                             </pre>
                             <p className='text-[11px] text-gray-400 px-1 pt-1'>Note: For restricted domains, you can set AllowedOrigins: ["https://yourdomain.com"].</p>
                         </div>

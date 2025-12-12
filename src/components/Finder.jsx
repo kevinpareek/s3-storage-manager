@@ -60,6 +60,8 @@ export default function Finder({ contents = [], setCurrentDirectory, onRename, o
                 const currentDir = parts.length > 0 ? '/' + parts.join('/') : '/';
                 setCurrentDirectory(currentDir);
             }
+            // Trigger parent refresh if provided
+            if (onDelete) onDelete();
         } catch (err) {
             console.error('Error deleting file/folder', err)
         } finally {
@@ -68,8 +70,6 @@ export default function Finder({ contents = [], setCurrentDirectory, onRename, o
             setDeleteModalOpen(false)
             setDeleteTarget(null)
         }
-    // Trigger parent refresh if provided
-    if (onDelete) onDelete();
     }
 
     async function handleFileDownload(key) {

@@ -1,5 +1,4 @@
-
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { LoaderCircle } from 'lucide-react';
 
 export default function DeleteConfirmModal({ isOpen, handleClose, onConfirm, type, name }) {

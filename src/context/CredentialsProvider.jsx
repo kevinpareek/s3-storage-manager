@@ -1,5 +1,5 @@
 import { S3Client } from "@aws-sdk/client-s3";
-import { createContext, useEffect, useState } from "react";
+import { createContext, useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 
 export const credentialsContext = createContext({
@@ -12,7 +12,6 @@ export const credentialsContext = createContext({
 });
 
 export default function CredentialsProvider({ children }) {
-    const [s3, setS3] = useState(null);
     const [credentialsList, setCredentialsList] = useState([]);
     const [selectedCredentialIndex, setSelectedCredentialIndex] = useState(0);
     const navigate = useNavigate();
@@ -41,6 +40,14 @@ export default function CredentialsProvider({ children }) {
                 return;
             }
             setCredentialsList(credsArray);
+
+            const storedIndex = localStorage.getItem("selectedCredentialIndex");
+            if (storedIndex !== null) {
+                const index = parseInt(storedIndex, 10);
+                if (index >= 0 && index < credsArray.length) {
+                    setSelectedCredentialIndex(index);
+                }
+            }
         } catch (err) {
             console.error("Invalid credentials in localStorage", err);
             navigate('/config');
@@ -48,12 +55,12 @@ export default function CredentialsProvider({ children }) {
     }, [navigate]);
 
     // Update S3 client when credentialsList or selectedCredentialIndex changes
-    useEffect(() => {
-        if (!credentialsList.length) return;
+    const s3 = useMemo(() => {
+        if (!credentialsList.length) return null;
         const cred = credentialsList[selectedCredentialIndex] || credentialsList[0];
-        if (!cred) return;
+        if (!cred) return null;
         const { region, access_key, secret_key, endpoint } = cred;
-        const client = new S3Client({
+        return new S3Client({
             region,
             endpoint,
             forcePathStyle: true,
@@ -62,8 +69,12 @@ export default function CredentialsProvider({ children }) {
                 secretAccessKey: secret_key
             }
         });
-        setS3(client);
     }, [credentialsList, selectedCredentialIndex]);
+
+    const handleSetSelectedCredentialIndex = (index) => {
+        setSelectedCredentialIndex(index);
+        localStorage.setItem("selectedCredentialIndex", index);
+    };
 
     const credentials = credentialsList[selectedCredentialIndex] || null;
     const values = {
@@ -71,7 +82,7 @@ export default function CredentialsProvider({ children }) {
         credentials,
         credentialsList,
         selectedCredentialIndex,
-        setSelectedCredentialIndex,
+        setSelectedCredentialIndex: handleSetSelectedCredentialIndex,
         setCredentialsList,
     };
 

@@ -48,4 +48,6 @@ temp/
 .parcel-cache/
 
 # Keep lockfiles in repo (package-lock.json / yarn.lock) unless you intentionally want to ignore them
+package-lock.json
+yarn.lock
 

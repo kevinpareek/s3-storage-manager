@@ -1,8 +1,9 @@
-import { CloudUpload, FileText, X, LoaderCircle, Check, Folder } from 'lucide-react'
+import { CloudUpload, FileText, X, LoaderCircle, Check, Folder, AlertTriangle } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import MultiPartUpload from '../api/MultiPartUpload'
 import { HeadObjectCommand, ListObjectsV2Command } from '@aws-sdk/client-s3'
 import useCredentials from '../hooks/useCredentials'
+import { toast } from 'react-toastify'
 
 export default function FileDropper({ currentDirectory = "", uploading = false, setUploading }) {
     const [isDragging, setIsDragging] = useState(false)
@@ -115,9 +116,6 @@ export default function FileDropper({ currentDirectory = "", uploading = false, 
     await addFiles(selectedFiles)
     }
 
-    const [dupWarning, setDupWarning] = useState('')
-    const dupWarningTimer = useRef(null)
-
     // Human readable bytes
     function formatBytes(bytes) {
         if (!bytes && bytes !== 0) return ''
@@ -154,12 +152,8 @@ export default function FileDropper({ currentDirectory = "", uploading = false, 
 
         // If no S3 client or credentials, just add unique items and warn that bucket couldn't be checked
         if (!s3 || !credentials || !credentials.name) {
-            if (localSkipped > 0) setDupWarning(`Skipped ${localSkipped} duplicate file(s) locally`)
+            if (localSkipped > 0) toast.warning(`Skipped ${localSkipped} duplicate file(s) locally`)
             setFiles(prev => [...prev, ...unique])
-            if (localSkipped > 0 && dupWarningTimer.current) {
-                clearTimeout(dupWarningTimer.current)
-                dupWarningTimer.current = setTimeout(() => setDupWarning(''), 4000)
-            }
             return
         }
 
@@ -252,29 +246,14 @@ export default function FileDropper({ currentDirectory = "", uploading = false, 
         }
 
         // Update UI and warnings for duplicates/conflicts
-        if (localSkipped > 0 || existsConflicts > 0) {
-            const parts = []
-            if (localSkipped > 0) parts.push(`${localSkipped} duplicate locally`)
-            if (existsConflicts > 0) {
-                // Show a short list of filenames that exist on S3 (limit to 5)
-                const sample = existsNames.slice(0, 5).map(n => n.split('/').pop())
-                const sampleText = sample.length ? `: ${sample.join(', ')}${existsNames.length > sample.length ? ', ...' : ''}` : ''
-                parts.push(`${existsConflicts} conflict on bucket${sampleText}`)
-            }
-            const msg = `Conflicts: ${parts.join(', ')}`
-            setDupWarning(msg)
-            if (dupWarningTimer.current) clearTimeout(dupWarningTimer.current)
-            dupWarningTimer.current = setTimeout(() => setDupWarning(''), 6000)
+        if (localSkipped > 0) {
+            toast.warning(`${localSkipped} duplicate file(s) skipped locally`, { autoClose: 3000 })
         }
 
-        if (toAdd.length > 0 || conflictItems.length > 0) setFiles(prev => [...prev, ...toAdd.map(i => ({ ...i, status: 'pending' })), ...conflictItems])
+        if (toAdd.length > 0 || conflictItems.length > 0) {
+            setFiles(prev => [...toAdd.map(i => ({ ...i, status: 'pending' })), ...conflictItems, ...prev])
+        }
     }
-
-    useEffect(() => {
-        return () => {
-            if (dupWarningTimer.current) clearTimeout(dupWarningTimer.current)
-        }
-    }, [])
 
     const removeFile = useCallback((index) => {
         setFiles(prevFiles => prevFiles.filter((_, i) => i !== index))
@@ -358,6 +337,11 @@ export default function FileDropper({ currentDirectory = "", uploading = false, 
             }
 
             setFiles(prev => prev.map((it) => it.id === item.id ? { ...it, status: 'done', progress: 100 } : it))
+            
+            // Remove the file after a short delay
+            setTimeout(() => {
+                setFiles(prev => prev.filter(p => p.id !== item.id))
+            }, 1500)
         }
 
     // Reset
@@ -383,7 +367,7 @@ export default function FileDropper({ currentDirectory = "", uploading = false, 
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [files])
 
-    const borderColor = uploading ? 'border-green-500 bg-green-950' : isDragging ? 'border-[#3a3a3a] bg-[#171717]' : 'border-[#252525] bg-[#101010]'
+    const borderColor = isDragging ? 'border-[#3a3a3a] bg-[#171717]' : 'border-[#252525] bg-[#101010]'
 
     return (
         <div
@@ -435,21 +419,25 @@ export default function FileDropper({ currentDirectory = "", uploading = false, 
                 </div>
             </div>
 
-                {/* Show duplicate warning even if no files were added (e.g. all skipped because they exist on S3) */}
-                {dupWarning && (
-                    <div className="mt-6">
-                        <div className="w-full p-2 bg-yellow-900 text-yellow-200 rounded text-xs font-mono mb-2 flex items-center justify-between">
-                            <div>{dupWarning}</div>
-                            <div className="flex items-center gap-2">
-                                <button onClick={replaceAllConflicts} className="btn btn-ghost btn-sm">Replace All</button>
-                                <button onClick={skipAllConflicts} className="btn btn-ghost btn-sm">Skip All</button>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
                 {files.length > 0 && (
                 <div className="mt-6 space-y-2">
+                    {/* Conflict Resolution UI */}
+                    {files.some(f => f.status === 'conflict') && (
+                        <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4 mb-4 flex items-center gap-3">
+                            <div className="p-2 bg-yellow-500/20 rounded-lg">
+                                <AlertTriangle className="w-5 h-5 text-yellow-500" />
+                            </div>
+                            <div>
+                                <h4 className="text-sm font-medium text-yellow-200">
+                                    Upload Conflicts
+                                </h4>
+                                <p className="text-xs text-yellow-500/80 mt-0.5">
+                                    {files.filter(f => f.status === 'conflict').length} file(s) already exist in this folder
+                                </p>
+                            </div>
+                        </div>
+                    )}
+
                     <div className="flex items-center justify-between gap-2 flex-wrap">
                         <div>
                             <h5 className="font-mono text-sm text-gray-200">Upload queue</h5>

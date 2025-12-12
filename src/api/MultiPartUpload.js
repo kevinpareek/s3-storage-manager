@@ -1,6 +1,7 @@
 import { AbortMultipartUploadCommand, CompleteMultipartUploadCommand, CreateMultipartUploadCommand, UploadPartCommand } from "@aws-sdk/client-s3";
 
 export default async function MultiPartUpload(s3, file, currentDirectory = "/", bucketName = "", opts = {}) {
+    if (!s3) throw new Error('S3 client is not initialized');
     // opts: { onProgress: (uploadedBytes, totalBytes)=>{}, signal: AbortSignal, partSize: number, concurrency: number, targetKey?: string }
     const { onProgress, signal, partSize, concurrency, targetKey } = opts || {}
 
@@ -80,7 +81,7 @@ export default async function MultiPartUpload(s3, file, currentDirectory = "/", 
         return true
 
     } catch (error) {
-        console.log("Failed to Upload", error)
+        console.error("Failed to Upload", error)
         if (uploadId) {
             await s3.send(new AbortMultipartUploadCommand({
                 Bucket: bucketName,

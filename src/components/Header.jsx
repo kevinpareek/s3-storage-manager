@@ -1,4 +1,3 @@
-
 import { useNavigate } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 import useCredentials from '../hooks/useCredentials';
@@ -20,7 +19,6 @@ export default function Header() {
     }
 
     function handleAddCredential() {
-    console.log('Add Credential clicked');
     setDropdownOpen(false);
     navigate('/config');
     }

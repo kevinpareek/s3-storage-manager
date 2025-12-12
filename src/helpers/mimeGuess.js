@@ -12,11 +12,11 @@ export function isImage(name) {
 }
 export function isVideo(name) {
   const ext = extOf(name)
-  return ['mp4','webm','ogg','mov','mkv'].includes(ext)
+  return ['mp4','webm','ogg','mov','mkv','avi','flv'].includes(ext)
 }
 export function isAudio(name) {
   const ext = extOf(name)
-  return ['mp3','wav','ogg','aac','flac','m4a'].includes(ext)
+  return ['mp3','wav','ogg','aac','flac','m4a','wma'].includes(ext)
 }
 export function isPDF(name) {
   return extOf(name) === 'pdf'
@@ -43,7 +43,7 @@ export function isDocument(name) {
 }
 export function isCode(name) {
   const ext = extOf(name)
-  const code = ['js','jsx','ts','tsx','py','java','c','cpp','cs','rb','php','go','rs','swift','kt','html','css','json','xml','sh','bat','pl','m','scala','dart','sql']
+  const code = ['js','jsx','ts','tsx','py','java','c','cpp','cs','rb','php','go','rs','swift','kt','html','css','json','xml','sh','bat','pl','m','scala','dart','sql','ipynb']
   return code.includes(ext)
 }
 export function isArchive(name) {

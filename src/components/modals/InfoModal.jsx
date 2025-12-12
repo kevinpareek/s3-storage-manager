@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react'
+import { useState, useMemo } from 'react'
+import { fileCategory } from '../../helpers/mimeGuess'
 
 function formatSize(bytes) {
   if (bytes == null || isNaN(bytes)) return '-'
@@ -13,21 +14,10 @@ function formatSize(bytes) {
 }
 
 function friendlyType(name, rawType) {
-  if (!name) return rawType || 'other'
-  const ext = name.toLowerCase().split('.').pop()
-  const IMAGE_EXTS = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp']
-  const VIDEO_EXTS = ['mp4', 'mov', 'avi', 'mkv', 'webm', 'flv']
-  const AUDIO_EXTS = ['mp3', 'wav', 'aac', 'ogg', 'flac', 'm4a', 'wma']
-  const DOCUMENT_EXTS = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'rtf', 'odt', 'ods', 'odp']
-  const CODE_EXTS = ['js', 'jsx', 'ts', 'tsx', 'py', 'java', 'c', 'cpp', 'cs', 'rb', 'php', 'go', 'rs', 'swift', 'kt', 'html', 'css', 'json', 'xml', 'sh', 'bat', 'pl', 'm', 'scala', 'dart', 'sql', 'ipynb']
-  const ARCHIVE_EXTS = ['zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz', 'iso', 'jar']
-  if (IMAGE_EXTS.includes(ext)) return 'Image'
-  if (VIDEO_EXTS.includes(ext)) return 'Video'
-  if (AUDIO_EXTS.includes(ext)) return 'Audio'
-  if (DOCUMENT_EXTS.includes(ext)) return 'Document'
-  if (CODE_EXTS.includes(ext)) return 'Code'
-  if (ARCHIVE_EXTS.includes(ext)) return 'Archive'
-  return (rawType === 'folder') ? 'Folder' : 'Other'
+  if (rawType === 'folder') return 'Folder'
+  if (!name) return 'Other'
+  const cat = fileCategory(name)
+  return cat.charAt(0).toUpperCase() + cat.slice(1)
 }
 
 export default function InfoModal({ isOpen, onClose, item, shareUrl, downloadUrl, isGenerating }) {

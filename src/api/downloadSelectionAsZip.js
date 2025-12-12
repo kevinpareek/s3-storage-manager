@@ -47,9 +47,7 @@ export default async function downloadSelectionAsZip(s3, items, bucketName, root
     }
 
     const blob = await zip.generateAsync({ type: 'blob' });
-    const filename = items.length === 1
-        ? (items[0].type === 'folder' ? `${items[0].name}.zip` : `${items[0].name}.zip`)
-        : 'selection.zip';
+    const filename = items.length === 1 ? `${items[0].name}.zip` : 'selection.zip';
 
     const a = document.createElement('a');
     const href = URL.createObjectURL(blob);

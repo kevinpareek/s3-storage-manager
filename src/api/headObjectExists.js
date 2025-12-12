@@ -1,6 +1,7 @@
 import { HeadObjectCommand, ListObjectsV2Command } from '@aws-sdk/client-s3'
 
 export default async function headObjectExists(s3, key, bucketName) {
+	if (!s3) throw new Error('S3 client is not initialized');
 	// If checking a folder/prefix, determine existence by listing one object under it
 	if (key.endsWith('/')) {
 		try {

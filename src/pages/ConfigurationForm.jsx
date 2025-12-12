@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import useCredentials from '../hooks/useCredentials'
 import { S3Client } from '@aws-sdk/client-s3'
@@ -16,14 +16,13 @@ export default function ConfigurationForm() {
     endpoint: '',
     publicUrl: ''
     })
-    const { credentials, credentialsList, setCredentialsList } = useCredentials()
+    const { setCredentialsList } = useCredentials()
     const navigate = useNavigate()
     const [copiedCors, setCopiedCors] = useState(false)
     const [copiedPolicy, setCopiedPolicy] = useState(false)
     const [copiedR2Endpoint, setCopiedR2Endpoint] = useState(false)
     const [copiedR2Region, setCopiedR2Region] = useState(false)
     const [copiedR2Cors, setCopiedR2Cors] = useState(false)
-    const [openSection, setOpenSection] = useState('aws')
     const [copiedKey, setCopiedKey] = useState(null)
     const [selectedProvider, setSelectedProvider] = useState('aws')
     const [providerSearch, setProviderSearch] = useState('')
@@ -315,7 +314,7 @@ export default function ConfigurationForm() {
             return navigate('/')
 
         } catch (error) {
-            console.log(error)
+            console.error(error)
             toast.error("Please enter valid credentials")
             setFormData({
                 name: '',

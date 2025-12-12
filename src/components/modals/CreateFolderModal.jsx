@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useState } from 'react'
 import addFolder from '../../api/addFolder'
 import useCredentials from '../../hooks/useCredentials'
 
@@ -56,7 +56,6 @@ export default function CreateFolderModal({ isOpen, handleClose, currentDirector
 							value={folderName}
 							onChange={(e) => {
 								setFolderName(e.target.value)
-								console.log((currentDirectory + e.target.value + '/'))
 							}}
 							className='input w-full text-sm'
 							placeholder='eg. my folder'

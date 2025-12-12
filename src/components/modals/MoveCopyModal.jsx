@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import useCredentials from '../../hooks/useCredentials'
 import copyObjectOrFolder from '../../api/copyObjectOrFolder'
 import deleteFileOrFolder from '../../api/deleteFileOrFolder'

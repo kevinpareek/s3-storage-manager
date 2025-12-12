@@ -85,8 +85,6 @@ export default function Finder({ contents = [], setCurrentDirectory, onRename, o
         }
     }
 
-    console.log(contents)
-
     return (
         <>
             <div className='divide-y divide-[#252525]'>

@@ -19,11 +19,18 @@ export default async function getFilePreview(s3, key, download = false, bucketNa
         throw new Error("S3 client is not initialized");
     }
 
+    // Derive a clean filename for download disposition to avoid including full paths
+    const safeName = (() => {
+        const parts = String(key || '').split('/').filter(Boolean);
+        const last = parts[parts.length - 1] || 'file';
+        return encodeURIComponent(last).replace(/%20/g, ' ');
+    })();
+
     const command = new GetObjectCommand({
         Bucket: bucketName,
         Key: key,
         ...(download && {
-            ResponseContentDisposition: `attachment; filename="${key}"`,
+            ResponseContentDisposition: `attachment; filename="${safeName}"`,
         }),
     });
 

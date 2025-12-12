@@ -80,7 +80,7 @@ export default async function MultiPartUpload(s3, file, currentDirectory = "/", 
         return true
 
     } catch (error) {
-        console.log("Failed to Upload", error)
+        console.error("Failed to Upload", error)
         if (uploadId) {
             await s3.send(new AbortMultipartUploadCommand({
                 Bucket: bucketName,

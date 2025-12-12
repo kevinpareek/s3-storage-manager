@@ -20,7 +20,6 @@ export default function Header() {
     }
 
     function handleAddCredential() {
-    console.log('Add Credential clicked');
     setDropdownOpen(false);
     navigate('/config');
     }

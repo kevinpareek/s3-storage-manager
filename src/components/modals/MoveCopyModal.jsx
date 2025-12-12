@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import useCredentials from '../../hooks/useCredentials'
 import copyObjectOrFolder from '../../api/copyObjectOrFolder'
-import renameFileOrFolder from '../../api/renameFileOrFolder'
 import deleteFileOrFolder from '../../api/deleteFileOrFolder'
 import headObjectExists from '../../api/headObjectExists'
 

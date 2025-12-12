@@ -12,7 +12,7 @@ import RenameModal from './modals/RenameModal'
 import MoveCopyModal from './modals/MoveCopyModal'
 import BulkDeleteModal from './modals/BulkDeleteModal'
 import useCredentials from '../hooks/useCredentials'
-import renameFileOrFolder from '../api/renameFileOrFolder'
+import renameFile from '../api/renameFile'
 import renameFolder from '../api/renameFolder'
 import searchFilesAndFolders from '../api/searchFilesAndFolders'
 import filterFilesByType from '../helpers/filterFilesByType'
@@ -428,7 +428,7 @@ export default function Container() {
                         if (lastSlash !== -1) {
                             newKey = oldKey.substring(0, lastSlash + 1) + newName;
                         }
-                        await renameFileOrFolder(s3, oldKey, newKey, credentials.name)
+                        await renameFile(s3, oldKey, newKey, credentials.name)
                     }
                     setIsRenameModalOpen(false);
                     setRenameTarget(null);

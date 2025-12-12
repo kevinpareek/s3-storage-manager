@@ -2,6 +2,7 @@ import copyObjectOrFolder from './copyObjectOrFolder';
 import deleteFileOrFolder from './deleteFileOrFolder';
 
 export default async function renameFolder(s3, oldPrefix, newPrefix, bucketName) {
+    if (!s3) throw new Error('S3 client is not initialized');
     if (!oldPrefix || !newPrefix) return false;
 
     // Normalize prefixes to ensure they end with '/'

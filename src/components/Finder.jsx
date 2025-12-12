@@ -44,22 +44,22 @@ export default function Finder({ contents = [], setCurrentDirectory, onRename, o
             setIsDeletingFileOrFolder(true)
             setDeletingFileOrFolderKey(key)
             await deleteFileOrFolder(s3, key, credentials.name)
-        // Directory logic
-        if (type === 'folder') {
-            // Remove trailing slash if present
-            let folderPath = key.endsWith('/') ? key.slice(0, -1) : key;
-            const parts = folderPath.split('/').filter(Boolean);
-            parts.pop(); // Remove deleted folder
-            const parentPath = parts.length > 0 ? '/' + parts.join('/') : '/';
-            setCurrentDirectory(parentPath);
-        } else {
-            // For file, stay in same directory
-            let filePath = key;
-            const parts = filePath.split('/').filter(Boolean);
-            parts.pop(); // Remove file name
-            const currentDir = parts.length > 0 ? '/' + parts.join('/') : '/';
-            setCurrentDirectory(currentDir);
-        }
+            // Directory logic
+            if (type === 'folder') {
+                // Remove trailing slash if present
+                let folderPath = key.endsWith('/') ? key.slice(0, -1) : key;
+                const parts = folderPath.split('/').filter(Boolean);
+                parts.pop(); // Remove deleted folder
+                const parentPath = parts.length > 0 ? '/' + parts.join('/') : '/';
+                setCurrentDirectory(parentPath);
+            } else {
+                // For file, stay in same directory
+                let filePath = key;
+                const parts = filePath.split('/').filter(Boolean);
+                parts.pop(); // Remove file name
+                const currentDir = parts.length > 0 ? '/' + parts.join('/') : '/';
+                setCurrentDirectory(currentDir);
+            }
         } catch (err) {
             console.error('Error deleting file/folder', err)
         } finally {
